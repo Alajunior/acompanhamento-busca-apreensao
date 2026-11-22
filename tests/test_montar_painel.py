@@ -83,7 +83,7 @@ def test_bd_recompoe_as_62_colunas(tmp_path, linha, payload):
 def test_html_tem_abas_filtros_e_agora(tmp_path, payload):
     montar_html(payload, tmp_path / "i.html")
     html = (tmp_path / "i.html").read_text("utf-8")
-    for aba in ("oper", "gest", "planilha"):
+    for aba in ("oper", "gest", "padroes", "planilha"):
         assert f'data-aba="{aba}"' in html
     for h in ("07:05", "09:05", "11:05", "13:05", "15:05", "17:05"):
         assert f'data-agora="{h}"' in html
@@ -92,6 +92,7 @@ def test_html_tem_abas_filtros_e_agora(tmp_path, payload):
     for t in ("midnight", "dark", "light"):
         assert f'data-tema="{t}"' in html
     assert 'src="vendor/chart.umd.min.js"' in html and "Agregar" in html
+    assert 'src="vendor/leaflet.js"' in html and 'href="vendor/leaflet.css"' in html and 'id="pd-mapa"' in html
 
 
 def test_chip_ligado_visivel_no_tema_claro(tmp_path, payload):
