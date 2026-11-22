@@ -184,25 +184,27 @@
     });
   }
 
-  function resumoRegiao(rows, h) {
+  function resumoRegiao(rows, h, v30) {
     const k = kpis(rows, h), n = k.processos;
     const riscos = rows.filter((r) => r.risco !== null).map((r) => r.risco);
     const neg = conta(rows, (r) => r.fase === "MANDADO NEGATIVO");
     const advs = contar(rows.filter((r) => r.adv !== SEM_ADV), (r) => r.adv);
     const mais = advs.size ? [...advs.keys()].sort(porChaves((a) => [-advs.get(a), a]))[0] : null;
     const p = {}; for (const c of ["vencidos", "hoje", "prox7", "diligencia"]) p[c] = pct(k[c], n);
-    return { kpis: k, pct: p, negativo: neg, pct_negativo: pct(neg, n),
+    const out = { kpis: k, pct: p, negativo: neg, pct_negativo: pct(neg, n),
       risco_medio: riscos.length ? soma(riscos) / riscos.length : null,
       etapas: ETAPAS.map((e) => [e, conta(rows, (r) => r.fase === e)]), perfil: perfil(rows, 5), comarcas: comarcas(rows, 5),
       advogados: { qtd: advs.size, sem_advogado: conta(rows, (r) => r.adv === SEM_ADV),
         mais: mais ? [mais, advs.get(mais), (advs.get(mais) / n) * 100] : null } };
+    if (v30) { const d30 = conta(rows, (r) => v30.has(r.i)); out.localizados = { d30, pct: pct(d30, n) }; }
+    return out;
   }
 
-  function regioes(semUF, ufs, h) {
+  function regioes(semUF, ufs, h, v30) {
     if (!ufs.length) return null;
-    const brasil = resumoRegiao(semUF, h);
+    const brasil = resumoRegiao(semUF, h, v30);
     const out = [...ufs].sort(cmp).map((uf) => {
-      const r = resumoRegiao(semUF.filter((x) => x.uf === uf), h);
+      const r = resumoRegiao(semUF.filter((x) => x.uf === uf), h, v30);
       r.uf = uf; r.part_processos = pct(r.kpis.processos, brasil.kpis.processos);
       r.part_risco = brasil.kpis.risco ? (r.kpis.risco / brasil.kpis.risco) * 100 : null;
       return r;
@@ -345,14 +347,114 @@
       const f = pl.fotos[k];
       return { kpis: kpis(filtrar(linhas(pl, k), filtros, pl), offset(pl, f.dia)), dia: f.dia, hora: f.hora, origem: f.origem };
     };
-    return { kpis: { atual: kpis(rows, 0), inicio: ref(pub.base), anterior: ref(pub.anterior) },
+    const temPlacas = !!pl.placas, v30 = temPlacas ? vistos30(pl, agora) : null;
+    const out = { kpis: { atual: kpis(rows, 0), inicio: ref(pub.base), anterior: ref(pub.anterior) },
       tabelas: tabelas(rows, pl.ordens.follow), escada: escada(rows), prazos: prazos(rows, 0), advogados: advogados(rows, 0),
-      mapa_uf: mapaUF(semUF), regioes: regioes(semUF, filtros.uf || [], 0), movimentacao: movimentacao(pl, pub, filtros),
+      mapa_uf: mapaUF(semUF), regioes: regioes(semUF, filtros.uf || [], 0, v30), movimentacao: movimentacao(pl, pub, filtros),
       destaques: destaques(rows, 0), risco_etapa: riscoEtapa(rows), risco_uf: riscoUF(rows), carteira_etapa: carteiraEtapa(rows),
       comarcas: comarcas(rows, 15), perfil: perfil(rows, 10), evolucao: evolucao(pl, pub, filtros) };
+    if (temPlacas) { out.localizado = localizado(pl, rows, agora); out.mapa_localizados = mapaLocalizados(pl, semUF, agora); }
+    return out;
   }
 
-  const A = { ETAPAS, tudo, linhas, filtrar, kpis, fmtInt, fmtRS, fmtPct0, arred, faseDe, offset };
+  // ---------- placas (inv. §2.1 "Veículo localizado", §7) ----------
+  const JANELAS = [24 * 60, 7 * 24 * 60, 30 * 24 * 60];
+  const ESTADOS_PADRAO = ["PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO", "SEM_CAPTURA_RECENTE"];
+  const minutosAgora = (a) => Number(a.slice(0, 2)) * 60 + Number(a.slice(3));
+  const cargaK = (pl, agora) => pl.placas.cargas.findIndex((c) => c.agora === agora);
+  const soAlnum = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+  function placasEstado(pl, k) {
+    if (!pl.__cachePlacas) {
+      const out = []; let atual = new Map();
+      for (const c of pl.placas.cargas) {
+        const e = c.estado;
+        if (Array.isArray(e)) { atual = new Map(); for (const r of e) atual.set(r[0], r); }
+        else { atual = new Map(atual); for (const i of e.sai) atual.delete(i); for (const r of e.muda) atual.set(r[0], r); }
+        out.push(atual);
+      }
+      Object.defineProperty(pl, "__cachePlacas", { value: out, enumerable: false });
+    }
+    return pl.__cachePlacas[k];
+  }
+
+  function estadoPasta(pl, est, i) {
+    if (pl.pastas.placa[i] === null) return "SEM_PLACA";
+    if (!est.has(i)) return "SEM_CAPTURA";
+    return pl.placas.estados[est.get(i)[6]];
+  }
+
+  function vistos30(pl, agora) {
+    const ag = minutosAgora(agora), est = placasEstado(pl, cargaK(pl, agora)), out = new Set();
+    for (const [i, r] of est) if (ag - r[1] <= JANELAS[2]) out.add(i);
+    return out;
+  }
+
+  const rotuloCaptura = ([cidade, uf, bairro]) => {
+    const cid = [cidade, uf].filter(Boolean).join("/");
+    return [cid, bairro].filter(Boolean).join(", ") || "local não informado";
+  };
+
+  function localizado(pl, rows, agora) {
+    const P = pl.placas, k = cargaK(pl, agora), carga = P.cargas[k], est = placasEstado(pl, k), ag = minutosAgora(agora);
+    const locs = P.dic.local, acao = pl.ordens.acao, placa = pl.pastas.placa;
+    const vis = rows.filter((r) => est.has(r.i)).map((r) => [r, est.get(r.i), ag - est.get(r.i)[1]]);
+    const [j24, j7, j30] = JANELAS.map((lim) => vis.filter((v) => v[2] <= lim));
+    const fora = (v) => { const ufc = locs[v[1][2]][1]; return ufc !== null && ufc !== v[0].uf; };
+    const nFora = conta(j30, fora);
+    const cid = new Map();
+    for (const v of j30) {
+      const [c, u] = locs[v[1][2]];
+      if (c !== null) { const kk = c + "\u0000" + u; cid.set(kk, (cid.get(kk) || 0) + 1); }
+    }
+    const ordem = new Map(acao.map((e, n) => [e, n]));
+    const ord = (f) => (ordem.has(f) ? ordem.get(f) : 99);
+    const rec = [...j24].sort(porChaves((v) => [ord(v[0].fase), v[2], v[0].pasta])).slice(0, 10);
+    const estados = {}; for (const e of P.estados) estados[e] = 0;
+    for (const r of rows) estados[estadoPasta(pl, est, r.i)]++;
+    const comPlaca = conta(rows, (r) => placa[r.i] !== null);
+    const cidades = [...cid.entries()].map(([kk, n]) => [...kk.split("\u0000"), n])
+      .sort(porChaves((x) => [-x[2], x[0], x[1]])).slice(0, 10).map(([c, u, n]) => [c, u, n, (n / j30.length) * 100]);
+    const out = { ate: carga.ate, falhou: carga.falhou, base: rows.length, com_placa: comPlaca, total: vis.length,
+      j24: j24.length, j7: j7.length, j30: j30.length, fora_uf: nFora, pct_fora: pct(nFora, j30.length),
+      pct_vistos30: pct(j30.length, comPlaca),
+      por_etapa: acao.map((e) => [e, ...[j24, j7, j30].map((j) => conta(j, (v) => v[0].fase === e)), P.sugestao[e]]),
+      total_etapas: [j24.length, j7.length, j30.length],
+      recentes: rec.map((v) => ({ pasta: v[0].pasta, etapa: v[0].fase, min: v[2], quando: v[1][1],
+        local: rotuloCaptura(locs[v[1][2]]), fora: fora(v) })),
+      cidades, estados };
+    if (carga.falhou) out.falhou_de = P.cargas[k - 1].agora;
+    return out;
+  }
+
+  function mapaLocalizados(pl, semUF, agora) {
+    const est = placasEstado(pl, cargaK(pl, agora)), ag = minutosAgora(agora), locs = pl.placas.dic.local, out = {};
+    for (const r of semUF) {
+      const v = est.get(r.i);
+      if (v && ag - v[1] <= JANELAS[2] && locs[v[2]][1] !== null) out[locs[v[2]][1]] = (out[locs[v[2]][1]] || 0) + 1;
+    }
+    return out;
+  }
+
+  function listaPadroes(pl, agora, filtros, estados, busca) {
+    const pub = pl.publicacoes.find((p) => p.agora === agora);
+    const est = placasEstado(pl, cargaK(pl, agora)), P = pl.placas, placa = pl.pastas.placa;
+    const oa = new Map(pl.ordens.acao.map((e, n) => [e, n])), oe = new Map(P.estados.map((e, n) => [e, n]));
+    const quer = new Set(estados), b = soAlnum(busca);
+    const out = [];
+    for (const r of filtrar(linhas(pl, pub.foto), filtros, pl)) {
+      const e = estadoPasta(pl, est, r.i);
+      if (!quer.has(e) || (b && !soAlnum(r.pasta).includes(b) && !soAlnum(placa[r.i]).includes(b))) continue;
+      const v = est.get(r.i);
+      out.push({ i: r.i, pasta: r.pasta, etapa: r.fase, estado: e, dias: v ? v[7] : null,
+        principal: v && v[8] !== null ? P.dic.principal[v[8]] : null, ult: v ? v[1] : null });
+    }
+    return out.sort(porChaves((x) => [oa.has(x.etapa) ? oa.get(x.etapa) : 99, oe.get(x.estado),
+      x.ult !== null ? -x.ult : Infinity, x.pasta]));
+  }
+
+  const A = { ETAPAS, tudo, linhas, filtrar, kpis, fmtInt, fmtRS, fmtPct0, arred, faseDe, offset,
+    ESTADOS_PADRAO, listaPadroes, placasEstado, estadoPasta, cargaK, minutosAgora, rotuloCaptura, soAlnum };
   g.Agregar = A;
   if (typeof module !== "undefined" && module.exports) module.exports = A;
 })(typeof window !== "undefined" ? window : globalThis);

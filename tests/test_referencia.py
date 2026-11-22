@@ -211,3 +211,78 @@ def test_recorte_vazio_sem_quebrar():
 
 def test_movimentacao_com_recorte_vazio_mostra_vazio():
     assert tudo(_tres_fotos(), {"uf": ["AC"]}, agora="09:05")["movimentacao"] == {"vazia": "recorte"}
+
+
+# ---------- placas ----------
+from tests.construtores import placas_min  # noqa: E402
+
+SP = ("SAO PAULO", "SP", "CENTRO")
+RJ = ("RIO DE JANEIRO", "RJ", "CENTRO")
+AGORA_MIN = 17 * 60 + 5
+
+
+def _cap(ult, loc=SP, est="APRENDENDO", dias=2):
+    return [ult, loc, 3, 1, 2, est, dias, "CENTRO, SAO PAULO/SP"]
+
+
+def test_janelas_bordas():
+    pl = placas_min(um_dia([pasta("a", "1º MANDADO EXPEDIDO"), pasta("b", "1º MANDADO EXPEDIDO"),
+                            pasta("c", "1º MANDADO EXPEDIDO")]),
+                    {"a": _cap(AGORA_MIN - 1440), "b": _cap(AGORA_MIN - 1441), "c": _cap(AGORA_MIN - 43201)}, {})
+    L = R.tudo(pl, "17:05", {})["localizado"]
+    assert (L["j24"], L["j7"], L["j30"], L["total"], L["base"], L["com_placa"]) == (1, 2, 2, 3, 3, 3)
+    assert L["por_etapa"][0] == ["MANDADO EXPEDIDO", 1, 2, 2, "Informar o local ao oficial de justiça"]
+    assert L["total_etapas"] == [1, 2, 2]
+
+
+def test_fora_da_uf():
+    pl = placas_min(um_dia([pasta("a", "LIMINAR DEFERIDA"), pasta("b", "LIMINAR DEFERIDA"), pasta("c", "LIMINAR DEFERIDA")]),
+                    {"a": _cap(0, RJ), "b": _cap(0, (None, None, None)), "c": _cap(0)}, {})
+    L = R.tudo(pl, "17:05", {})["localizado"]
+    assert L["fora_uf"] == 1 and L["pct_fora"] == pytest.approx(100 / 3)
+
+
+def test_cidades_desempate():
+    rows = [pasta(x, "LIMINAR DEFERIDA") for x in "abcd"]
+    pl = placas_min(um_dia(rows), {"a": _cap(0, RJ), "b": _cap(0), "c": _cap(0, ("CAMPINAS", "SP", None)),
+                                   "d": _cap(0, ("CAMPINAS", "SP", "X"))}, {})
+    L = R.tudo(pl, "17:05", {})["localizado"]
+    assert [c[:3] for c in L["cidades"]] == [["CAMPINAS", "SP", 2], ["RIO DE JANEIRO", "RJ", 1], ["SAO PAULO", "SP", 1]]
+    assert L["cidades"][0][3] == pytest.approx(50.0)
+
+
+def test_recentes_ordem():
+    rows = [pasta("a", "AGUARDANDO LIMINAR"), pasta("b", "1º MANDADO EXPEDIDO"), pasta("c", "1º MANDADO EXPEDIDO"),
+            pasta("d", "1º MANDADO EXPEDIDO")]
+    pl = placas_min(um_dia(rows), {"a": _cap(AGORA_MIN - 5), "b": _cap(AGORA_MIN - 60), "c": _cap(AGORA_MIN - 30),
+                                   "d": _cap(AGORA_MIN - 2000)}, {})
+    rec = R.tudo(pl, "17:05", {})["localizado"]["recentes"]
+    assert [r["pasta"] for r in rec] == ["c", "b", "a"] and rec[0]["min"] == 30 and rec[0]["local"] == "SAO PAULO/SP, CENTRO"
+
+
+def test_estados_soma_base():
+    rows = [pasta(x, "LIMINAR DEFERIDA") for x in "abcd"]
+    pl = placas_min(um_dia(rows), {"a": _cap(0, est="PADRAO_OBSERVADO", dias=7),
+                                   "b": _cap(-90000, est="SEM_CAPTURA_RECENTE", dias=None)}, {"d": None})
+    E = R.tudo(pl, "17:05", {})["localizado"]["estados"]
+    assert E == {"PADRAO_OBSERVADO": 1, "PADRAO_EM_FORMACAO": 0, "APRENDENDO": 0, "SEM_CAPTURA_RECENTE": 1,
+                 "SEM_CAPTURA": 1, "SEM_PLACA": 1}
+    assert sum(E.values()) == 4
+
+
+def test_lista_padroes_ordem_e_busca():
+    rows = [pasta("p1", "AGUARDANDO LIMINAR"), pasta("p2", "1º MANDADO EXPEDIDO"), pasta("p3", "1º MANDADO EXPEDIDO")]
+    pl = placas_min(um_dia(rows), {"p1": _cap(0, est="PADRAO_OBSERVADO", dias=8), "p2": _cap(-10),
+                                   "p3": _cap(-5)}, {"p2": "ZZA1B23"})
+    L = R.lista_padroes(pl, "17:05", {}, list(R.ESTADOS_PADRAO), "")
+    assert [x["pasta"] for x in L] == ["p3", "p2", "p1"]
+    assert [x["pasta"] for x in R.lista_padroes(pl, "17:05", {}, list(R.ESTADOS_PADRAO), "zza-1b2")] == ["p2"]
+
+
+def test_regiao_e_mapa_localizados():
+    rows = [pasta("a", "LIMINAR DEFERIDA"), pasta("b", "LIMINAR DEFERIDA", uf="RJ")]
+    pl = placas_min(um_dia(rows), {"a": _cap(0, RJ), "b": _cap(-50000)}, {})
+    res = R.tudo(pl, "17:05", {"uf": ["SP"]})
+    assert res["mapa_localizados"] == {"RJ": 1}
+    assert res["regioes"]["ufs"][0]["localizados"] == {"d30": 1, "pct": 100.0}
+    assert res["regioes"]["brasil"]["localizados"] == {"d30": 1, "pct": 50.0}

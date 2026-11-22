@@ -19,6 +19,8 @@ FAIXAS_IDADE = ("ate 5 anos", "6-10 anos", "11-15 anos", "16+ anos", "sem ano")
 FAIXAS_COBERTURA = ("< 50%", "50-80%", "80-100%", ">= 100%", "sem bem ou risco <= 0")
 SEM_ADV, SEM_MARCA, SEM_COMARCA = "(sem advogado)", "(sem marca)", "(sem comarca)"
 GRUPOS_FILTRO = ("uf", "carteira", "adv", "etapa", "produto")
+ESTADOS_PADRAO = ("PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO", "SEM_CAPTURA_RECENTE")   # ligados na aba
+JANELAS_MIN = (24 * 60, 7 * 24 * 60, 30 * 24 * 60)
 
 
 # ---------- formatos (iguais aos do JS) ----------
@@ -265,28 +267,32 @@ def _pct(n: int, base: int) -> float | None:
     return n / base * 100 if base else None
 
 
-def resumo_regiao(rows: list[dict], h: int) -> dict:
+def resumo_regiao(rows: list[dict], h: int, v30: set[int] | None = None) -> dict:
     k = kpis(rows, h)
     n = k["processos"]
     riscos = [r["risco"] for r in rows if r["risco"] is not None]
     neg = sum(r["fase"] == "MANDADO NEGATIVO" for r in rows)
     advs = _contar([r for r in rows if r["adv"] != SEM_ADV], lambda r: r["adv"])
     mais = min(advs, key=lambda a: (-advs[a], a)) if advs else None
-    return {"kpis": k, "pct": {c: _pct(k[c], n) for c in ("vencidos", "hoje", "prox7", "diligencia")},
+    out = {"kpis": k, "pct": {c: _pct(k[c], n) for c in ("vencidos", "hoje", "prox7", "diligencia")},
             "negativo": neg, "pct_negativo": _pct(neg, n), "risco_medio": sum(riscos) / len(riscos) if riscos else None,
             "etapas": [[e, sum(r["fase"] == e for r in rows)] for e in ETAPAS], "perfil": perfil(rows, 5),
             "comarcas": comarcas(rows, 5),
             "advogados": {"qtd": len(advs), "sem_advogado": sum(r["adv"] == SEM_ADV for r in rows),
                           "mais": [mais, advs[mais], advs[mais] / n * 100] if mais else None}}
+    if v30 is not None:
+        d30 = sum(r["i"] in v30 for r in rows)
+        out["localizados"] = {"d30": d30, "pct": _pct(d30, n)}
+    return out
 
 
-def regioes(rows_sem_uf: list[dict], ufs: list[str], h: int) -> dict | None:
+def regioes(rows_sem_uf: list[dict], ufs: list[str], h: int, v30: set[int] | None = None) -> dict | None:
     if not ufs:
         return None
-    brasil = resumo_regiao(rows_sem_uf, h)
+    brasil = resumo_regiao(rows_sem_uf, h, v30)
     out = []
     for uf in sorted(ufs):
-        r = resumo_regiao([x for x in rows_sem_uf if x["uf"] == uf], h)
+        r = resumo_regiao([x for x in rows_sem_uf if x["uf"] == uf], h, v30)
         r["uf"] = uf
         r["part_processos"] = _pct(r["kpis"]["processos"], brasil["kpis"]["processos"])
         r["part_risco"] = (r["kpis"]["risco"] / brasil["kpis"]["risco"] * 100) if brasil["kpis"]["risco"] else None
@@ -461,10 +467,137 @@ def tudo(payload: dict, agora: str, filtros: dict) -> dict:
         return {"kpis": kpis(filtrar(linhas(payload, k), filtros, payload), h), "dia": fotos[k]["dia"],
                 "hora": fotos[k]["hora"], "origem": fotos[k]["origem"]}
 
-    return {"kpis": {"atual": kpis(rows, 0), "inicio": ref(pub["base"]), "anterior": ref(pub["anterior"])},
+    tem_placas = "placas" in payload
+    v30 = vistos30(payload, agora) if tem_placas else None
+    out = {"kpis": {"atual": kpis(rows, 0), "inicio": ref(pub["base"]), "anterior": ref(pub["anterior"])},
             "tabelas": tabelas(rows, payload["ordens"]["follow"]), "escada": escada(rows), "prazos": prazos(rows, 0),
             "advogados": advogados(rows, 0), "mapa_uf": mapa_uf(sem_uf),
-            "regioes": regioes(sem_uf, list(filtros.get("uf") or []), 0),
+            "regioes": regioes(sem_uf, list(filtros.get("uf") or []), 0, v30),
             "movimentacao": movimentacao(payload, pub, filtros), "destaques": destaques(rows, 0),
             "risco_etapa": risco_etapa(rows), "risco_uf": risco_uf(rows), "carteira_etapa": carteira_etapa(rows),
             "comarcas": comarcas(rows, 15), "perfil": perfil(rows, 10), "evolucao": evolucao(payload, pub, filtros)}
+    if tem_placas:
+        out["localizado"] = localizado(payload, rows, agora)
+        out["mapa_localizados"] = mapa_localizados(payload, sem_uf, agora)
+    return out
+
+# ---------- placas (inv. §2.1 "Veículo localizado", §7) ----------
+
+def _minutos(agora: str) -> int:
+    return int(agora[:2]) * 60 + int(agora[3:])
+
+
+def _carga(payload: dict, agora: str) -> int:
+    return next(k for k, c in enumerate(payload["placas"]["cargas"]) if c["agora"] == agora)
+
+
+def placas_estado(payload: dict, k: int) -> dict[int, list]:
+    cache = payload.setdefault("_cache_placas", {})
+    if k not in cache:
+        atual = {}
+        for c in payload["placas"]["cargas"][: k + 1]:
+            e = c["estado"]
+            if isinstance(e, list):
+                atual = {r[0]: r for r in e}
+            else:
+                atual = dict(atual)
+                for i in e["sai"]:
+                    atual.pop(i, None)
+                for r in e["muda"]:
+                    atual[r[0]] = r
+        cache[k] = atual
+    return cache[k]
+
+
+def estado_pasta(payload: dict, est: dict, i: int) -> str:
+    if payload["pastas"]["placa"][i] is None:
+        return "SEM_PLACA"
+    if i not in est:
+        return "SEM_CAPTURA"
+    return payload["placas"]["estados"][est[i][6]]
+
+
+def vistos30(payload: dict, agora: str) -> set[int]:
+    ag, est = _minutos(agora), placas_estado(payload, _carga(payload, agora))
+    return {i for i, r in est.items() if ag - r[1] <= JANELAS_MIN[2]}
+
+
+def _rotulo_captura(loc: list) -> str:
+    # "CIDADE/UF, bairro" (inv. §2.1, "Mais recentes")
+    cidade, uf, bairro = loc
+    cid = "/".join(x for x in (cidade, uf) if x)
+    return ", ".join(x for x in (cid, bairro) if x) or "local não informado"
+
+
+def localizado(payload: dict, rows: list[dict], agora: str) -> dict:
+    pl = payload["placas"]
+    k = _carga(payload, agora)
+    carga, est, ag = pl["cargas"][k], placas_estado(payload, k), _minutos(agora)
+    locs, acao = pl["dic"]["local"], payload["ordens"]["acao"]
+    placa = payload["pastas"]["placa"]
+    vis = [(r, est[r["i"]], ag - est[r["i"]][1]) for r in rows if r["i"] in est]
+    j24, j7, j30 = ([v for v in vis if v[2] <= lim] for lim in JANELAS_MIN)
+
+    def fora(v) -> bool:
+        uf_c = locs[v[1][2]][1]
+        return uf_c is not None and uf_c != v[0]["uf"]
+
+    n_fora = sum(fora(v) for v in j30)
+    cid: dict[tuple, int] = {}
+    for v in j30:
+        c, u, _ = locs[v[1][2]]
+        if c is not None:
+            cid[(c, u)] = cid.get((c, u), 0) + 1
+    ordem = {e: n for n, e in enumerate(acao)}
+    rec = sorted(j24, key=lambda v: (ordem.get(v[0]["fase"], 99), v[2], v[0]["pasta"]))[:10]
+    estados = {e: 0 for e in pl["estados"]}
+    for r in rows:
+        estados[estado_pasta(payload, est, r["i"])] += 1
+    com_placa = sum(placa[r["i"]] is not None for r in rows)
+    out = {"ate": carga["ate"], "falhou": carga["falhou"], "base": len(rows), "com_placa": com_placa, "total": len(vis),
+           "j24": len(j24), "j7": len(j7), "j30": len(j30), "fora_uf": n_fora, "pct_fora": _pct(n_fora, len(j30)),
+           "pct_vistos30": _pct(len(j30), com_placa),
+           "por_etapa": [[e, *(sum(v[0]["fase"] == e for v in j) for j in (j24, j7, j30)), pl["sugestao"][e]] for e in acao],
+           "total_etapas": [len(j24), len(j7), len(j30)],
+           "recentes": [{"pasta": v[0]["pasta"], "etapa": v[0]["fase"], "min": v[2], "quando": v[1][1],
+                         "local": _rotulo_captura(locs[v[1][2]]), "fora": fora(v)} for v in rec],
+           "cidades": [[c, u, n, n / len(j30) * 100] for (c, u), n in sorted(cid.items(), key=lambda x: (-x[1], x[0]))[:10]],
+           "estados": estados}
+    if carga["falhou"]:
+        out["falhou_de"] = pl["cargas"][k - 1]["agora"]
+    return out
+
+
+def mapa_localizados(payload: dict, rows_sem_uf: list[dict], agora: str) -> dict:
+    est, ag, locs = placas_estado(payload, _carga(payload, agora)), _minutos(agora), payload["placas"]["dic"]["local"]
+    out: dict[str, int] = {}
+    for r in rows_sem_uf:
+        v = est.get(r["i"])
+        if v is not None and ag - v[1] <= JANELAS_MIN[2] and locs[v[2]][1] is not None:
+            out[locs[v[2]][1]] = out.get(locs[v[2]][1], 0) + 1
+    return dict(sorted(out.items()))
+
+
+def _so_alnum(s: str | None) -> str:
+    return "".join(c for c in (s or "").upper() if c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+
+def lista_padroes(payload: dict, agora: str, filtros: dict, estados: list[str], busca: str) -> list[dict]:
+    # lista da aba Padrões: etapa (ação) → estado → última passagem desc → pasta; busca por A-Z0-9 em pasta ou placa
+    pub = next(p for p in payload["publicacoes"] if p["agora"] == agora)
+    est = placas_estado(payload, _carga(payload, agora))
+    pl, placa = payload["placas"], payload["pastas"]["placa"]
+    ordem_acao = {e: n for n, e in enumerate(payload["ordens"]["acao"])}
+    ordem_est = {e: n for n, e in enumerate(pl["estados"])}
+    b = _so_alnum(busca)
+    out = []
+    for r in filtrar(linhas(payload, pub["foto"]), filtros, payload):
+        e = estado_pasta(payload, est, r["i"])
+        if e not in estados or (b and b not in _so_alnum(r["pasta"]) and b not in _so_alnum(placa[r["i"]])):
+            continue
+        v = est.get(r["i"])
+        out.append({"i": r["i"], "pasta": r["pasta"], "etapa": r["fase"], "estado": e, "dias": v[7] if v else None,
+                    "principal": pl["dic"]["principal"][v[8]] if v and v[8] is not None else None,
+                    "ult": v[1] if v else None})
+    return sorted(out, key=lambda x: (ordem_acao.get(x["etapa"], 99), ordem_est[x["estado"]],
+                                      -x["ult"] if x["ult"] is not None else math.inf, x["pasta"]))
