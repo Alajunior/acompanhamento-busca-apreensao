@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: pip install -r requirements.txt
+      - name: Simulação do zero e conferência do funil
+        run: python -m dados.gerar --verificar
+      - run: python -m pytest -q
+
+  publicar:
+    # publica o docs/ versionado (gerado localmente): os números do README batem com o painel
+    if: github.ref == 'refs/heads/main'
+    needs: testes
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+      - id: deploy
+        uses: actions/deploy-pages@v5
