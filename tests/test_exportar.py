@@ -96,3 +96,87 @@ def test_regioes_com_localizados(node, payload):
     i = rot.index("Veículos localizados 30 dias")
     assert rot[i + 1] == "% da carteira localizada (30 dias)" and rot[i + 2] == "Advogados"
     assert out["Regioes"][i][1:] == [R["regioes"]["ufs"][0]["localizados"]["d30"], R["regioes"]["brasil"]["localizados"]["d30"]]
+
+
+# ---------- abas das placas ----------
+COLS_LOC = ["Pasta", "Processo", "Etapa", "Tipo de agendamento", "UF do processo", "Advogado", "Placa", "Marca/modelo",
+            "Capturas (total)", "Capturas 7 dias", "Capturas 30 dias", "Última captura", "Horas desde a última", "Rua", "Número",
+            "Bairro", "Cidade", "UF da captura", "CEP", "Latitude", "Longitude", "Fora da UF do processo",
+            "Empresa do monitoramento", "Link da foto", "storage_path"]
+COLS_PAD = ["Pasta", "Placa", "Etapa", "Estado", "Dias no ponto principal", "Passagens no ponto principal", "Costuma aparecer",
+            "Rua", "Número", "Bairro", "Cidade", "UF", "CEP", "Última passagem", "Perto de casa (CEP)", "Área das capturas (km)",
+            "Endereço do banco"]
+
+
+@pytest.fixture(scope="module")
+def placas_json(tmp_path_factory, payload, cargas, sim):
+    from src.montar_painel import montar_placas
+    from src.padroes import bancos_por_pasta
+    arq = tmp_path_factory.mktemp("pl") / "placas.json"
+    montar_placas(cargas, bancos_por_pasta(sim), payload, arq)
+    return json.loads(arq.read_text("utf-8"))
+
+
+def pacote_placas(payload, pj, agora, filtros, rows):
+    k = [c["agora"] for c in payload["placas"]["cargas"]].index(agora)
+    det = {}
+    for c in pj["cargas"][: k + 1]:
+        if "sai" in c:
+            for i in c["sai"]:
+                det.pop(str(i), None)
+            det.update(c["muda"])
+        else:
+            det = dict(c)
+    est = referencia.placas_estado(payload, k)
+    ids = {r["i"] for r in rows}
+    return {"agora_min": referencia._minutos(agora), "acao": payload["ordens"]["acao"], "rotulos": payload["placas"]["rotulos"],
+            "local": payload["placas"]["dic"]["local"], "enderecos": pj["enderecos"],
+            "banco": {i: b for i, b in pj["banco"].items() if int(i) in ids},
+            "resumo": {str(i): v for i, v in est.items() if i in ids}, "detalhe": {i: v for i, v in det.items() if int(i) in ids},
+            "lista": referencia.lista_padroes(payload, agora, filtros, list(payload["placas"]["estados"]), ""),
+            "placa": payload["pastas"]["placa"]}
+
+
+def _chamar_planilhas(node, payload, filtros, placas, agora="17:05"):
+    pub = next(p for p in payload["publicacoes"] if p["agora"] == agora)
+    rows = referencia.filtrar(referencia.linhas(payload, pub["foto"]), filtros, payload)
+    R = referencia.tudo(payload, agora, filtros)
+    pk = placas(rows) if callable(placas) else placas
+    return node("planilhas", R, rows, None, filtros, pub, payload["fotos"][pub["foto"]], payload["hoje"], pk), rows
+
+
+def test_localizados_colunas_e_ordem(node, payload, placas_json):
+    f = {"uf": ["AM", "PA"]}
+    out, rows = _chamar_planilhas(node, payload, f, lambda rows: pacote_placas(payload, placas_json, "17:05", f, rows))
+    loc = out["Localizados"]
+    assert loc[0] == COLS_LOC
+    est = referencia.placas_estado(payload, 5)
+    assert len(loc) - 1 == sum(r["i"] in est for r in rows) > 10
+    ordem = {e: n for n, e in enumerate(payload["ordens"]["acao"])}
+    chaves = [(ordem.get(l[2], 99), l[11]) for l in loc[1:]]
+    assert [c[0] for c in chaves] == sorted(c[0] for c in chaves)
+    for (a, qa), (b, qb) in zip(chaves, chaves[1:]):
+        assert a < b or qa >= qb                      # dentro da etapa, última captura mais recente primeiro
+    assert all(l[23] in ("", None) for l in loc[1:]) and {l[21] for l in loc[1:]} <= {"sim", "nao"}
+    assert all(str(l[22]).startswith("CAMERAS ") for l in loc[1:])
+
+
+def test_padroes_todos_os_estados(node, payload, placas_json):
+    f = {"uf": ["SP"], "carteira": ["FROTAS 1"]}
+    out, rows = _chamar_planilhas(node, payload, f, lambda rows: pacote_placas(payload, placas_json, "17:05", f, rows))
+    pad = out["Padroes"]
+    assert pad[0] == COLS_PAD and len(pad) - 1 == len(rows)
+    estados = {l[3] for l in pad[1:]}
+    assert {"Sem captura", "Padrão observado"} <= estados
+    assert {l[14] for l in pad[1:]} <= {"sim", "nao"}
+    assert list(out)[:7] == ["BD", "Resumo", "Prazos", "Advogados", "Movimentacao", "Localizados", "Padroes"]
+
+
+def test_sem_placas_sem_abas(node, payload):
+    out, _ = _chamar_planilhas(node, payload, {}, None)
+    assert "Localizados" not in out and "Padroes" not in out
+
+
+def test_placas_indisponiveis_avisa(node, payload):
+    out, _ = _chamar_planilhas(node, payload, {}, {"indisponivel": True})
+    assert "indisponível" in out["Localizados"][0][0] and "indisponível" in out["Padroes"][0][0]

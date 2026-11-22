@@ -75,7 +75,44 @@
     return { nome: `${chave === "uf" ? "uf_sem_filtro_uf" : chave}_${hoje}.csv`, texto: csv(cab, linhas) };
   }
 
-  function planilhas(R, rows, bd, filtros, pub, foto, hoje) {
+
+  // ---------- abas das placas (inv. §8) ----------
+  const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  const porChaves = (f) => (a, b) => { const x = f(a), y = f(b); for (let i = 0; i < x.length; i++) { const c = cmp(x[i], y[i]); if (c) return c; } return 0; };
+  const COLS_LOC = ["Pasta", "Processo", "Etapa", "Tipo de agendamento", "UF do processo", "Advogado", "Placa", "Marca/modelo",
+    "Capturas (total)", "Capturas 7 dias", "Capturas 30 dias", "Última captura", "Horas desde a última", "Rua", "Número",
+    "Bairro", "Cidade", "UF da captura", "CEP", "Latitude", "Longitude", "Fora da UF do processo",
+    "Empresa do monitoramento", "Link da foto", "storage_path"];
+  const COLS_PAD = ["Pasta", "Placa", "Etapa", "Estado", "Dias no ponto principal", "Passagens no ponto principal", "Costuma aparecer",
+    "Rua", "Número", "Bairro", "Cidade", "UF", "CEP", "Última passagem", "Perto de casa (CEP)", "Área das capturas (km)",
+    "Endereço do banco"];
+  const INDISP = "Detalhe das capturas de placa indisponível: abra o painel por um servidor (o arquivo placas.json é carregado à parte).";
+
+  // placas = {agora_min, acao, rotulos, local, enderecos, banco, resumo, detalhe, lista, placa} (montado pelo painel)
+  function abasPlacas(rows, bd, P, hoje) {
+    const quando = (q) => { const m = ((q % 1440) + 1440) % 1440;
+      return `${addDias(hoje, Math.floor(q / 1440))} ${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+    const pos = bd ? new Map(bd.pastas.map((x, j) => [x, j])) : null, idx = bd ? new Map(bd.colunas.map((c, j) => [c, j])) : null;
+    const doBD = (i, c) => (pos && pos.has(i) ? bd.valores[pos.get(i)][idx.get(c)] : null);
+    const ordem = new Map(P.acao.map((e, n) => [e, n]));
+    const loc = rows.filter((r) => P.resumo[r.i]).map((r) => {
+      const v = P.resumo[r.i], d = P.detalhe[r.i], e = d ? P.enderecos[d.ultima.e] : [], [cid, ufc, bairro] = P.local[v[2]];
+      const marca = [doBD(r.i, "MARCA") || (r.marca && !r.marca.startsWith("(") ? r.marca : null), doBD(r.i, "MODELO")].filter(Boolean).join(" ");
+      return { o: [ordem.has(r.fase) ? ordem.get(r.fase) : 99, -v[1], r.pasta],
+        l: [r.pasta, doBD(r.i, "PROCESSO_UNICO"), r.fase, r.tipo, r.uf, r.adv, P.placa[r.i], marca || null, v[3], v[4], v[5], quando(v[1]),
+          r2((P.agora_min - v[1]) / 60), e[0] ?? null, e[1] ?? null, bairro, cid, ufc, e[5] ?? null, d ? d.ultima.lat : null, d ? d.ultima.lon : null,
+          simnao(ufc !== null && ufc !== r.uf), d ? d.ultima.empresa : null, "", d ? d.ultima.storage : null] };
+    }).sort(porChaves((x) => x.o)).map((x) => x.l);
+    const pad = P.lista.map((x) => {
+      const d = P.detalhe[x.i], pp = d ? d.pontos.find((q) => q[8]) : null, e = pp ? P.enderecos[pp[7]] : [];
+      return [x.pasta, P.placa[x.i], x.etapa, P.rotulos[x.estado], pp ? pp[3] : null, pp ? pp[4] : null, pp ? pp[5] : null,
+        e[0] ?? null, e[1] ?? null, e[2] ?? null, e[3] ?? null, e[4] ?? null, e[5] ?? null, x.ult !== null ? quando(x.ult) : null,
+        simnao(!!(d && d.perto_de_casa)), d && d.area ? d.area.km : null, P.banco[x.i] ?? null];
+    });
+    return { Localizados: [COLS_LOC, ...loc], Padroes: [COLS_PAD, ...pad] };
+  }
+
+  function planilhas(R, rows, bd, filtros, pub, foto, hoje, placas) {
     const out = {};
     // BD: as 62 colunas da regra; as estáveis vêm de bd.json, as da publicação vêm da foto
     if (!bd) out.BD = [["Base analítica indisponível: abra o painel por um servidor (o arquivo bd.json é carregado à parte)."]];
@@ -101,6 +138,9 @@
     const nMov = Math.max(trans.length, movs.length);
     out.Movimentacao = [["de", "para", "qtd", "", "movimento", "pasta"]];
     for (let j = 0; j < nMov; j++) out.Movimentacao.push([...(trans[j] || ["", "", ""]), "", ...(movs[j] || ["", ""])]);
+    // sem fonte de placas as duas abas não saem (como no real); fonte sem o detalhe carregado = aviso
+    if (placas && placas.indisponivel) { out.Localizados = [[INDISP]]; out.Padroes = [[INDISP]]; }
+    else if (placas) Object.assign(out, abasPlacas(rows, bd, placas, hoje));
     const lista = (gr) => (filtros[gr] && filtros[gr].length ? filtros[gr].join(", ") : "(todos)");
     out.Filtros = [["Campo", "Valor"], ["Dados de", `${foto.dia.slice(8, 10)}/${foto.dia.slice(5, 7)}/${foto.dia.slice(0, 4)} ${pub.quando}`],
       ["Origem", pub.origem === "oficial" ? "tabela oficial" : "ao vivo"], ["UF", lista("uf")], ["Carteira", lista("carteira")], ["Advogado", lista("adv")],

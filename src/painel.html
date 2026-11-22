@@ -1119,7 +1119,18 @@ function iniciarExportacao() {
     try {
       const pub = pubAtual(), foto = D.fotos[pub.foto];
       const rows = A.filtrar(A.linhas(D, pub.foto), S.f, D);
-      const abas = Exportar.planilhas(S.R, rows, await carregarBD(), S.f, pub, foto, HOJE);
+      let placas;   // sem fonte de placas: as abas não saem; sem o placas.json (arquivo local): aviso nas abas
+      if (D.placas) {
+        const pl = await carregarPlacas();
+        if (!pl) placas = {indisponivel: true};
+        else {
+          const k = A.cargaK(D, S.agora), est = A.placasEstado(D, k), det = detalhes(k), resumo = {}, detalhe = {}, banco = {};
+          for (const r of rows) { if (est.has(r.i)) resumo[r.i] = est.get(r.i); if (det.has(r.i)) detalhe[r.i] = det.get(r.i); if (pl.banco[r.i]) banco[r.i] = pl.banco[r.i]; }
+          placas = {agora_min: A.minutosAgora(S.agora), acao: D.ordens.acao, rotulos: D.placas.rotulos, local: D.placas.dic.local,
+            enderecos: pl.enderecos, banco, resumo, detalhe, lista: A.listaPadroes(D, S.agora, S.f, D.placas.estados, ""), placa: D.pastas.placa};
+        }
+      }
+      const abas = Exportar.planilhas(S.R, rows, await carregarBD(), S.f, pub, foto, HOJE, placas);
       const wb = XLSX.utils.book_new();
       for (const [nome, linhas] of Object.entries(abas)) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(linhas), nome);
       XLSX.writeFile(wb, `acompanhamento_bap_${foto.dia.replace(/-/g, "")}_${pub.quando.replace(":", "")}.xlsx`);
