@@ -78,3 +78,14 @@ def test_fontes_tem_as_colunas_do_inventario(sim):
     assert {"CARTEIRA_CONTRATO", "MARCA", "MODELO", "PLACA", "CHASSI", "ANO_FABRICACAO", "ANO_MODELO"} <= set(sim.garantia.columns)
     assert {"PASTA", "COR"} <= set(sim.veiculo.columns) and {"PASTA", "DATA_CONCLUSAO"} <= set(sim.distribuicao.columns)
     assert sim.garantia["PLACA"].dropna().str.match(r"^ZZ[A-Z]\d[A-Z]\d{2}$").all()
+
+
+def test_empates_tem_emendar_como_etapa_real_em_87pct(sim):
+    q = HOJE + pd.Timedelta(hours=17, minutes=5)
+    t = sim.tarefas
+    falsas = t[(t["inicio"] <= q) & (t["fim"] > q) & t["_falsa"]]
+    pares = falsas[falsas["_trio"] == False]   # noqa: E712  (AGUARDANDO × EMENDAR)
+    assert 25 <= falsas["_pasta"].nunique() <= 60
+    # a tarefa falsa é a "outra" do par: AGUARDANDO falsa = etapa real EMENDAR
+    assert 0.80 <= (pares["TIPO_AGENDAMENTO"] == "AGUARDANDO LIMINAR").mean() <= 0.94
+    assert t["_trio"].any()

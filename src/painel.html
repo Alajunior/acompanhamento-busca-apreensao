@@ -109,6 +109,7 @@ body[data-theme="light"] .help{background:#f1f5f9;border-left-color:#8a6a1f}
 .lb{font:800 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-right:2px}
 .chip{display:inline-flex;align-items:center;gap:6px;font:700 12px Inter;padding:5px 11px;border-radius:30px;border:1px solid var(--bd-i);background:rgba(255,255,255,.04);color:var(--t3);cursor:pointer;transition:.2s;white-space:nowrap}
 body[data-theme="light"] .chip{background:#fff}
+body[data-theme="light"] .chip.on{background:var(--acg);border-color:transparent;color:#fff}
 .chip.on{background:var(--acg);border-color:transparent;color:#fff}
 body[data-theme="midnight"] .chip.on{color:#04121f}
 .chip.atalho{border-style:dashed}
@@ -693,8 +694,8 @@ function regiaoUma(u, b) {
   const negD = ok(u.pct_negativo) && ok(b.pct_negativo) ? u.pct_negativo - b.pct_negativo : null;
   const rel = ok(u.risco_medio) && ok(b.risco_medio) && b.risco_medio ? (u.risco_medio / b.risco_medio - 1) * 100 : null;
   const n = u.kpis.processos, nb = b.kpis.processos;
-  const etapas = u.etapas.map(([e, q], i) => { const pu = n ? q / n * 100 : 0, pb = nb ? b.etapas[i][1] / nb * 100 : 0;
-    return `<div class="bul"><span>${e}</span><span class="tr"><i style="width:${pu}%;background:${corEtapa(i)}"></i><em style="left:${pb}%"></em></span><span><b>${p1(pu)}</b> ${int(q)}, Brasil ${p1(pb)}</span></div>`; }).join("");
+  const etapas = u.etapas.map(([e, q], i) => { const pu = n ? q / n * 100 : null, pb = nb ? b.etapas[i][1] / nb * 100 : null;
+    return `<div class="bul"><span>${e}</span><span class="tr"><i style="width:${pu || 0}%;background:${corEtapa(i)}"></i>${ok(pb) ? `<em style="left:${pb}%"></em>` : ""}</span><span><b>${p1(pu)}</b> ${int(q)}, Brasil ${p1(pb)}</span></div>`; }).join("");
   const com = u.comarcas.length ? `<div class="tblwrap"><table class="t"><thead><tr><th>Comarca</th><th>Processos</th><th>% negativo</th></tr></thead><tbody>${u.comarcas.map(c => `<tr><td>${esc(c[0])}</td><td>${int(c[2])}</td><td class="${c[3] >= 50 ? "ruim" : ""}">${p1(c[3])}</td></tr>`).join("")}</tbody></table></div>` : VAZIO();
   const adv = u.advogados;
   return `<div class="reg-cab"><span class="uf">${u.uf}</span><span class="muted">${esc(NOME_UF[u.uf] || "")}</span><span><b>${int(n)}</b> processos, ${p1(u.part_processos)} do Brasil</span><span><b>${brlC(u.kpis.risco)}</b> de risco, ${p1(u.part_risco)} do Brasil</span></div>
@@ -756,6 +757,7 @@ function renderMov(R) {
   $("mov-desc").textContent = `Comparado com a primeira foto do dia${base ? ` (${base.hora})` : ""}, com os mesmos filtros.`;
   const el = $("c-mov");
   if (m.vazia === "oficial") return trocarHTML(el, VAZIO("A publicação atual veio da tabela oficial: a movimentação compara rodadas ao vivo e volta na próxima atualização."));
+  if (m.vazia === "recorte") return trocarHTML(el, VAZIO());
   if (m.vazia) return trocarHTML(el, VAZIO("Sem foto anterior hoje para comparar — a movimentação aparece a partir da segunda atualização do dia."));
   const t = (l, v) => `<div class="tile"><div class="tl">${l}</div><div class="tv">${int(v)}</div></div>`;
   trocarHTML(el, `<div class="mtiles">${t("Entradas", m.entradas)}${t("Saídas", m.saidas)}${t("Mudanças de etapa", m.mud_etapa)}${t("Mudanças de agendamento", m.mud_agendamento)}</div>` +
@@ -908,7 +910,9 @@ function iniciar() {
   construirFiltros();
   const m = /aba=(oper|gest|planilha)/.exec(location.search + location.hash);
   S.R = A.tudo(D, S.agora, S.f); renderTopo(); renderAtivos();
-  aplicarAba(m ? m[1] : (store.get("bap_aba") || "oper"));
+  const aba = m ? m[1] : (store.get("bap_aba") || "oper");
+  // capturas de tela: desenha depois das fontes, senão o Chart.js mede os rótulos com a fonte provisória
+  if (ESTATICO && document.fonts) document.fonts.ready.then(() => aplicarAba(aba)); else aplicarAba(aba);
 }
 iniciar();
 </script>

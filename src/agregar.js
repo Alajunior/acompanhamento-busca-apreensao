@@ -216,6 +216,7 @@
     if (pub.base === pub.foto) return { vazia: "base" };
     const base = new Map(filtrar(linhas(pl, pub.base), filtros, pl).map((r) => [r.i, r]));
     const atual = new Map(filtrar(linhas(pl, pub.foto), filtros, pl).map((r) => [r.i, r]));
+    if (!base.size && !atual.size) return { vazia: "recorte" };
     const num = (a, b) => a - b;
     const entradas = [...atual.keys()].filter((i) => !base.has(i)).sort(num);
     const saidas = [...base.keys()].filter((i) => !atual.has(i)).sort(num);

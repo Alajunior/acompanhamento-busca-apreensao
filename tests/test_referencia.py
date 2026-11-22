@@ -207,3 +207,7 @@ def test_recorte_vazio_sem_quebrar():
     assert t["kpis"]["atual"]["processos"] == 0 and t["escada"] is None and t["destaques"] == []
     assert t["regioes"]["ufs"][0]["pct"]["vencidos"] is None and t["advogados"]["linhas"] == []
     assert t["risco_etapa"]["cobertura_mediana"] is None
+
+
+def test_movimentacao_com_recorte_vazio_mostra_vazio():
+    assert tudo(_tres_fotos(), {"uf": ["AC"]}, agora="09:05")["movimentacao"] == {"vazia": "recorte"}

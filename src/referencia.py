@@ -303,6 +303,8 @@ def movimentacao(payload: dict, pub: dict, filtros: dict) -> dict:
         return {"vazia": "base"}
     base = {r["i"]: r for r in filtrar(linhas(payload, pub["base"]), filtros, payload)}
     atual = {r["i"]: r for r in filtrar(linhas(payload, pub["foto"]), filtros, payload)}
+    if not base and not atual:
+        return {"vazia": "recorte"}
     entradas = sorted(set(atual) - set(base))
     saidas = sorted(set(base) - set(atual))
     comuns = sorted(set(atual) & set(base))

@@ -30,7 +30,7 @@ Este painel responde às perguntas do jurídico:
 5. **Aba Busca e Apreensão:** o modo planilha, com as três tabelas dinâmicas da planilha original do jurídico (Produtivos, Follow e Em diligência).
 6. **Exportar Excel:** um `.xlsx` com os filtros ativos (BD com as 62 colunas, Resumo, Prazos, Advogados, Movimentação, Filtros e, com UF escolhida, Regiões). Cada card também tem seu **CSV**.
 
-Cada card tem um botão **ⓘ** com o "como ler". São três temas (Midnight, Dark e Light), e o painel funciona no celular.
+Os cards de análise têm um botão **ⓘ** com o "como ler". São três temas (Midnight, Dark e Light), e o painel funciona no celular.
 
 ![Painel, aba Gestão](docs/painel_gestao.png)
 
@@ -42,7 +42,7 @@ Cada card tem um botão **ⓘ** com o "como ler". São três temas (Midnight, Da
 | **A regra** | Agenda de tarefas abertas → **uma linha por pasta** (62 colunas). Ficam só os 21 tipos válidos; uma tarefa BAIXADO tira a pasta inteira. Vence o dia de agendamento mais recente; no mesmo dia, **LIMINAR DEFERIDA > EMENDAR INICIAL > AGUARDANDO LIMINAR** (só quando todas as tarefas do dia estão nesse trio); depois decidem a hora e o maior ID | [`src/regra.py`](src/regra.py) |
 | **Travas de publicação** | Toda publicação vira foto. Rodada com menos de **85%** das linhas da anterior é rejeitada (aceita se a seguinte confirmar a queda, com até 2% de diferença). Se a via ao vivo falha, entra a tabela oficial | [`src/publicacao.py`](src/publicacao.py) |
 | **Conciliação** | A "tabela oficial" simulada reproduz a procedure real, que escolhe **ao acaso** entre tarefas do mesmo dia. A conciliação compara por tipo (fora as pastas com empate), por carteira e por pasta, com tolerância de max(5, 2%) | [`src/conciliacao.py`](src/conciliacao.py) |
-| **Payload** | 44 fotos (38 dias de histórico mais as de hoje). A primeira vai inteira; as demais, só como **delta** do que mudou. O painel inteiro cabe em um HTML de ~710 KB | [`src/montar_painel.py`](src/montar_painel.py) |
+| **Payload** | 44 fotos (39 dias de histórico, sem domingo, mais as 5 de hoje). A primeira vai inteira; as demais, só como **delta** do que mudou. O painel inteiro cabe em um HTML de ~710 KB | [`src/montar_painel.py`](src/montar_painel.py) |
 | **Agregações** | Os filtros rodam no navegador ([`src/agregar.js`](src/agregar.js)). Uma referência independente em Python ([`src/referencia.py`](src/referencia.py)) calcula os mesmos números, e o **teste de paridade** roda o JS no Node e compara tudo em 49 combinações de filtros | [`tests/test_paridade.py`](tests/test_paridade.py) |
 | **Painel** | HTML, CSS e JS puro, Chart.js e um mapa em SVG próprio. Animações respeitam `prefers-reduced-motion`. A exportação `.xlsx` é feita no navegador (SheetJS) | [`src/painel.html`](src/painel.html), [`src/exportar.js`](src/exportar.js) |
 
@@ -50,13 +50,13 @@ Cada card tem um botão **ⓘ** com o "como ler". São três temas (Midnight, Da
 
 | Marco | Real | Simulado |
 |---|---|---|
-| Entrada no contencioso | 170 | 178 |
+| Entrada no contencioso | 170 | 176 |
 | Ajuizamento | 71 | 76 |
 | Liminar deferida | 34 | 35 |
-| 1º mandado | 18 | 17 |
-| Apreendidos no 1º mandado | 74% | 73,8% |
+| 1º mandado | 18 | 18 |
+| Apreendidos no 1º mandado | 74% | 73,5% |
 
-No dia simulado são **4.500 processos**, 27% com agendamento vencido e 36 pastas com empate de tarefas no mesmo dia. A conciliação com a tabela oficial fecha nas três recargas.
+No dia simulado são **4.617 processos**, 27% com agendamento vencido e 42 pastas com empate de tarefas no mesmo dia. Nos empates entre AGUARDANDO LIMINAR e EMENDAR INICIAL, a etapa real é EMENDAR em cerca de 87%, a proporção medida no histórico do sistema real: é por isso que a precedência do fluxo põe EMENDAR na frente. A conciliação com a tabela oficial fecha nas três recargas.
 
 ## Decisões
 

@@ -88,6 +88,10 @@ MARCAS = {
 CORES = np.array(["PRATA", "BRANCA", "PRETA", "CINZA", "VERMELHA", "AZUL"])
 TIPOS_AUX = np.array(["PROTOCOLAR PETICAO", "CONFERIR CUSTAS", "CONTATAR CLIENTE", "JUNTAR DOCUMENTO", "AUDIENCIA"])
 N_ADV = 24
+# empate (duas tarefas do trio no mesmo dia): na etapa real EMENDAR é comum, em AGUARDANDO é raro → ~87% dos
+# empates AGUARDANDO × EMENDAR têm EMENDAR como etapa real (medido no histórico do sistema real)
+P_EMPATE = {"EMENDAR INICIAL": 0.9, "AGUARDANDO LIMINAR": 0.047}
+P_TRIO = 0.05
 FATOR_PRAZO = {"ADV-07": 0.5, "ADV-15": 0.55}   # advogados que deixam prazo vencer mais (sinal "vencidos alto")
 
 
@@ -165,6 +169,7 @@ def simular(seed: int = 42) -> Simulacao:
                    np.array([f"ADV-{i:02d}" for i in range(1, N_ADV + 1)], dtype=object)[rng.choice(N_ADV, n, p=carga / carga.sum())])
 
     linhas, pastas = [], []
+    falsas: dict[int, bool] = {}          # ID_AGENDA da tarefa "falsa" do empate → é trio?
     id_agenda = 1_000_000
     defeito_chave = rng.random(n)
     for i in range(n):
@@ -199,13 +204,18 @@ def simular(seed: int = 42) -> Simulacao:
                 primeira = primeira or prazo
                 c_ini = c_fim
             prazo = primeira
-            if tipo in ("EMENDAR INICIAL", "AGUARDANDO LIMINAR") and rng.random() < 0.35:
-                outro = "AGUARDANDO LIMINAR" if (tipo == "EMENDAR INICIAL") == (rng.random() < 0.87) else "EMENDAR INICIAL"
-                if outro == tipo:
-                    outro = "EMENDAR INICIAL" if tipo == "AGUARDANDO LIMINAR" else "AGUARDANDO LIMINAR"
-                id_agenda += 1                            # empate: duas do trio no mesmo dia de prazo (a proc escolhe ao acaso)
+            # empate: outra tarefa do trio no mesmo dia de prazo (a procedure oficial escolhe ao acaso entre elas)
+            extras = []
+            if tipo in P_EMPATE and rng.random() < P_EMPATE[tipo]:
+                extras = [("AGUARDANDO LIMINAR" if tipo == "EMENDAR INICIAL" else "EMENDAR INICIAL", False)]
+            elif tipo == "LIMINAR DEFERIDA" and rng.random() < P_TRIO:
+                extras = [("EMENDAR INICIAL", True), ("AGUARDANDO LIMINAR", True)]
+            fim_falsa = min(fim, ini + pd.Timedelta(days=float(rng.uniform(3, 12)))) if extras else None
+            for outro, trio in extras:
+                id_agenda += 1
+                falsas[id_agenda] = trio
                 linhas.append((id_agenda, chave_txt, outro, prazo.normalize() + pd.Timedelta(hours=23, minutes=59),
-                               ini, min(fim, ini + pd.Timedelta(days=float(rng.uniform(2, 8)))), pasta))
+                               ini, fim_falsa, pasta))
             if rng.random() < 0.5:
                 id_agenda += 1
                 linhas.append((id_agenda, chave_txt, str(rng.choice(TIPOS_AUX)), prazo + pd.Timedelta(days=int(rng.integers(-5, 10))),
@@ -224,6 +234,8 @@ def simular(seed: int = 42) -> Simulacao:
                                       "dia_liminar", "dia_mandado1", "dia_apreensao", "dia_saida", "motivo_saida",
                                       "tentativa_apreensao"])
     p = _atributos_processo(rng, p)
+    tarefas["_falsa"] = tarefas["ID_AGENDA"].isin(falsas.keys())
+    tarefas["_trio"] = tarefas["ID_AGENDA"].map(falsas).fillna(False).astype(bool)
     tarefas = tarefas.merge(p[["PASTA", *COLS_AGENDA_PASTA]].rename(columns={"PASTA": "_pasta"}), on="_pasta", how="left")
     estoque, garantia, veiculo, distribuicao = _fontes(rng, p)
     return Simulacao(p, tarefas, estoque, garantia, veiculo, distribuicao)

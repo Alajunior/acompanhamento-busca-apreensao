@@ -91,3 +91,9 @@ def test_html_tem_abas_filtros_e_agora(tmp_path, payload):
     for t in ("midnight", "dark", "light"):
         assert f'data-tema="{t}"' in html
     assert 'src="vendor/chart.umd.min.js"' in html and "Agregar" in html
+
+
+def test_chip_ligado_visivel_no_tema_claro(tmp_path, payload):
+    # no tema claro a regra do chip (fundo branco) é mais específica que .chip.on: precisa da sua própria regra
+    montar_html(payload, tmp_path / "i.html")
+    assert 'body[data-theme="light"] .chip.on{' in (tmp_path / "i.html").read_text("utf-8")
