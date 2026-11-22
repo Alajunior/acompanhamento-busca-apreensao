@@ -342,6 +342,14 @@ def _verificar(sim: Simulacao) -> None:
     baix = set(ag.loc[tipos == "BAIXADO", "PASTA"].str.strip())
     print(f"  pastas com tarefa aberta hoje 17:05: {ag['PASTA'].str.strip().nunique()} ({len(baix)} com BAIXADO)")
     print("  etapas hoje:", tipos[~ag["PASTA"].str.strip().isin(baix)].value_counts().head(10).to_dict())
+    from dados.capturas import FIM, capturas          # fase 2 (import tardio: capturas importa este módulo)
+    cap = capturas(sim)
+    placa = cap["PLATE"].str.upper().str.replace(r"[^A-Z0-9]", "", regex=True)
+    vistos = set(placa[pd.to_datetime(cap["CAPTURED"]) >= FIM - pd.Timedelta(days=60)])
+    p = sim.pastas
+    ativas = p[(p["dia_ajuizamento"] <= HOJE) & (p["dia_saida"].isna() | (p["dia_saida"] > FIM))]
+    placas = ativas["PASTA"].map(sim.garantia.drop_duplicates("CARTEIRA_CONTRATO").set_index("CARTEIRA_CONTRATO")["PLACA"]).dropna()
+    print(f"  capturas: {len(cap)}; vistos em 60 dias: {placas.isin(vistos).mean():.1%} das ativas com placa (alvo 35%)")
 
 
 if __name__ == "__main__":
