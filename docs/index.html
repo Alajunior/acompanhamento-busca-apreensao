@@ -1636,7 +1636,7 @@ function renderPadroes(R) {
   const pag = lista.slice(PD.pag * POR_PAG, (PD.pag + 1) * POR_PAG);
   trocarHTML($("pd-lista"), !lista.length ? VAZIO(PD.busca ? "Nenhum contrato encontrado nos estados selecionados — selecione outros estados na faixa acima para procurar em Sem captura/Sem placa." : "Nenhum contrato nos estados e filtros selecionados.")
     : `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>Pasta</th><th style="text-align:left">Etapa</th><th style="text-align:left">Estado</th><th style="text-align:left">Ponto principal</th><th>Última passagem</th></tr></thead><tbody>` +
-      pag.map(x => `<tr class="pdl${x.i === PD.sel ? " sel" : ""}" tabindex="0" data-pdsel="${x.i}"><td>${esc(x.pasta)}</td><td class="esq">${esc(x.etapa)}</td><td class="esq">${tagEstado(x.estado)}${x.dias ? ` <small class="muted">${x.dias} ${x.dias === 1 ? "dia" : "dias"}</small>` : ""}</td><td class="esq">${esc(x.principal || "—")}</td><td>${x.ult !== null ? quandoBR(x.ult) : "—"}</td></tr>`).join("") + `</tbody></table></div>`);
+      pag.map(x => `<tr class="pdl${x.i === PD.sel ? " sel" : ""}" tabindex="0" data-pdsel="${x.i}"><td>${esc(x.pasta)}</td><td class="esq">${esc(x.etapa)}</td><td class="esq">${tagEstado(x.estado)}${x.dias ? ` <small class="muted" style="white-space:nowrap">${x.dias} ${x.dias === 1 ? "dia" : "dias"}</small>` : ""}</td><td class="esq">${esc(x.principal || "—")}</td><td>${x.ult !== null ? quandoBR(x.ult) : "—"}</td></tr>`).join("") + `</tbody></table></div>`);
   $("pd-pag").innerHTML = lista.length ? `<button class="chip" data-pdpag="-1" ${PD.pag ? "" : "disabled"} aria-label="página anterior">‹</button> ${PD.pag + 1} de ${nPag} · ${int(lista.length)} contratos <button class="chip" data-pdpag="1" ${PD.pag < nPag - 1 ? "" : "disabled"} aria-label="próxima página">›</button>` : "";
   carregarPlacas().then(() => { if (S.aba === "padroes") { renderDetalhe(lista); desenharMapa(lista); } });
 }
@@ -1795,6 +1795,8 @@ function iniciar() {
   construirFiltros();
   const m = /aba=(oper|gest|padroes|planilha)/.exec(location.search + location.hash);
   S.R = A.tudo(D, S.agora, S.f); renderTopo(); renderAtivos();
+  const lp = /pasta=(\w+)/.exec(location.search + location.hash);   // link direto para o detalhe de uma pasta na aba Padrões
+  if (lp && D.placas) { const i = D.pastas.pasta.indexOf(lp[1]); if (i >= 0) { PD.sel = i; PD.estados = new Set(D.placas.estados); PD.busca = lp[1]; $("pd-busca").value = lp[1]; } }
   const aba = m ? m[1] : (store.get("bap_aba") || "oper");
   // capturas de tela: desenha depois das fontes, senão o Chart.js mede os rótulos com a fonte provisória
   if (ESTATICO && document.fonts) document.fonts.ready.then(() => aplicarAba(aba)); else aplicarAba(aba);
