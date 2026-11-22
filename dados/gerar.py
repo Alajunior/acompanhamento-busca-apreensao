@@ -23,8 +23,8 @@ import pandas as pd
 HOJE = pd.Timestamp("2026-11-26")
 DIA_EXTINCAO = pd.Timestamp("2026-11-03")          # EMENDA REALIZADA deixa de existir (episódio fiel ao real)
 INICIO = HOJE - pd.Timedelta(days=1000)             # aquecimento: a carteira chega ao estado estável antes da janela
-CHEGADAS_DIA = 17.0                                 # ajuizamentos por dia
-P_APREENSAO = 0.27                                  # fração que termina em apreensão (o resto sai por acordo/desistência)
+CHEGADAS_DIA = 16.8                                 # ajuizamentos por dia
+P_APREENSAO = 0.22                                  # fração que termina em apreensão (o resto sai por acordo/desistência)
 
 # UFs e peso (mesmo do projeto de Entrega Amigável)
 UFS = ["SP", "MG", "RJ", "BA", "PR", "RS", "PE", "CE", "PA", "SC", "GO", "MA", "AM", "ES", "PB", "RN", "MT", "AL",
@@ -191,13 +191,13 @@ def simular(seed: int = 42) -> Simulacao:
             tipo_txt = tipo.lower() + " " if rng.random() < 0.01 else tipo
             id_agenda += 1
             linhas.append((id_agenda, chave_txt, tipo_txt, prazo, ini, fim, pasta))
-            if tipo in ("EMENDAR INICIAL", "AGUARDANDO LIMINAR") and rng.random() < 0.10:
+            if tipo in ("EMENDAR INICIAL", "AGUARDANDO LIMINAR") and rng.random() < 0.35:
                 outro = "AGUARDANDO LIMINAR" if (tipo == "EMENDAR INICIAL") == (rng.random() < 0.87) else "EMENDAR INICIAL"
                 if outro == tipo:
                     outro = "EMENDAR INICIAL" if tipo == "AGUARDANDO LIMINAR" else "AGUARDANDO LIMINAR"
                 id_agenda += 1                            # empate: duas do trio no mesmo dia de prazo (a proc escolhe ao acaso)
                 linhas.append((id_agenda, chave_txt, outro, prazo.normalize() + pd.Timedelta(hours=23, minutes=59),
-                               ini, min(fim, ini + pd.Timedelta(days=float(rng.uniform(1, 5)))), pasta))
+                               ini, min(fim, ini + pd.Timedelta(days=float(rng.uniform(2, 8)))), pasta))
             if rng.random() < 0.5:
                 id_agenda += 1
                 linhas.append((id_agenda, chave_txt, str(rng.choice(TIPOS_AUX)), prazo + pd.Timedelta(days=int(rng.integers(-5, 10))),
