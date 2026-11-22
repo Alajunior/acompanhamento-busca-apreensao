@@ -350,6 +350,9 @@ def _verificar(sim: Simulacao) -> None:
     ativas = p[(p["dia_ajuizamento"] <= HOJE) & (p["dia_saida"].isna() | (p["dia_saida"] > FIM))]
     placas = ativas["PASTA"].map(sim.garantia.drop_duplicates("CARTEIRA_CONTRATO").set_index("CARTEIRA_CONTRATO")["PLACA"]).dropna()
     print(f"  capturas: {len(cap)}; vistos em 60 dias: {placas.isin(vistos).mean():.1%} das ativas com placa (alvo 35%)")
+    from src.padroes import cargas
+    est = pd.Series([v["resumo"]["estado"] for v in cargas(sim)[-1]["pastas"].values()]).value_counts()
+    print("  estados às 17:05 (pastas com captura):", est.to_dict(), "(alvo entre os recentes: 42/20/38%)")
 
 
 if __name__ == "__main__":

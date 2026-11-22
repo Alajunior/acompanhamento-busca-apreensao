@@ -40,7 +40,6 @@ def test_proporcao_vistos_60d(sim, cap):
     assert 0.30 <= frac <= 0.40, frac
 
 
-@pytest.mark.xfail(strict=True, reason="padroes chega na Task 2")
 def test_estados_presentes(sim):
     from src.padroes import cargas
     ult = cargas(sim)[-1]["pastas"]
