@@ -73,7 +73,7 @@ def _cidade_do_veiculo(rng, uf: str, comarca: str) -> tuple[tuple, str]:
 def _passagens(rng, ponto: dict, dias_atras: np.ndarray, hora: int) -> list[tuple]:
     out = []
     for d in dias_atras:
-        horas = [hora] + ([(hora + 9) % 24] if rng.random() < 0.2 else [])
+        horas = [hora] + ([hora + 9 if hora <= 12 else hora - 10] if rng.random() < 0.2 else [])   # ida e volta
         for h in horas:
             quando = HOJE - pd.Timedelta(days=int(d)) + pd.Timedelta(minutes=float(h * 60 + rng.normal(0, 40)))
             dl, da = 0.00054 * np.sqrt(rng.random()), rng.uniform(0, 2 * np.pi)   # câmera a ≤ 60 m do ponto

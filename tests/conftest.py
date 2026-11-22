@@ -3,6 +3,7 @@ import pytest
 
 from dados.gerar import simular
 from src.montar_painel import montar_payload
+from src.padroes import cargas as _cargas
 from src.publicacao import linha_do_tempo
 
 
@@ -17,5 +18,10 @@ def linha(sim):
 
 
 @pytest.fixture(scope="session")
-def payload(linha):
-    return montar_payload(linha)
+def cargas(sim):
+    return _cargas(sim)
+
+
+@pytest.fixture(scope="session")
+def payload(linha, cargas):
+    return montar_payload(linha, cargas)

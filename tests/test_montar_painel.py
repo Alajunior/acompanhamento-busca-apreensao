@@ -4,7 +4,8 @@ import pandas as pd
 import pytest
 
 from dados.gerar import HOJE, simular
-from src.montar_painel import DINAMICAS_BD, montar_bd, montar_html, montar_payload
+from src.montar_painel import DINAMICAS_BD, montar_bd, montar_html, montar_payload, montar_placas
+from src.padroes import ESTADOS
 from src.publicacao import linha_do_tempo
 from src.regra import COLUNAS, TIPOS, chave
 
@@ -97,3 +98,65 @@ def test_chip_ligado_visivel_no_tema_claro(tmp_path, payload):
     # no tema claro a regra do chip (fundo branco) é mais específica que .chip.on: precisa da sua própria regra
     montar_html(payload, tmp_path / "i.html")
     assert 'body[data-theme="light"] .chip.on{' in (tmp_path / "i.html").read_text("utf-8")
+
+
+def decodificar_placas(pl: dict, k: int) -> dict[int, list]:
+    estado: dict[int, list] = {}
+    for j in range(k + 1):
+        e = pl["placas"]["cargas"][j]["estado"]
+        if isinstance(e, list):
+            estado = {r[0]: r for r in e}
+        else:
+            for i in e["sai"]:
+                estado.pop(i)
+            for r in e["muda"]:
+                estado[r[0]] = r
+    return estado
+
+
+def test_placas_delta_reconstroi(payload, cargas):
+    pl = payload["placas"]
+    idx = {p: i for i, p in enumerate(payload["pastas"]["pasta"])}
+    loc, pp = pl["dic"]["local"], pl["dic"]["principal"]
+    assert [c["agora"] for c in pl["cargas"]] == ["07:05", "09:05", "11:05", "13:05", "15:05", "17:05"]
+    assert pl["cargas"][4]["falhou"] and pl["cargas"][4]["estado"] == {"sai": [], "muda": []}
+    for k, c in enumerate(cargas):
+        dec = decodificar_placas(payload, k)
+        esp = {idx[p]: v["resumo"] for p, v in c["pastas"].items() if p in idx}
+        assert set(dec) == set(esp) and len(dec) > 1000
+        for i, r in esp.items():
+            _, ult, l, n, n7, n30, est, dias, p = dec[i]
+            assert ult == int((r["ult"] - HOJE).total_seconds() // 60)
+            assert tuple(loc[l]) == r["loc"] and (n, n7, n30, dias) == (r["n"], r["n7"], r["n30"], r["dias"])
+            assert ESTADOS[est] == r["estado"] and (pp[p] if p is not None else None) == r["principal"]
+
+
+def test_placas_json_sem_nan(tmp_path, payload, cargas, sim):
+    from src.padroes import bancos_por_pasta
+    montar_placas(cargas, bancos_por_pasta(sim), payload, tmp_path / "placas.json")
+    d = json.loads((tmp_path / "placas.json").read_text("utf-8"), parse_constant=lambda c: 1 / 0)
+    n = len(payload["pastas"]["pasta"])
+    assert len(d["cargas"]) == 6 and all(0 <= int(i) < n for i in d["cargas"][0])
+    assert all(0 <= int(i) < n for i in d["banco"]) and len(d["banco"]) > 4000
+    um = next(iter(d["cargas"][0].values()))
+    assert {"ultima", "pontos", "sequencia", "area", "semana", "horas", "ultimas", "perto_de_casa"} <= set(um)
+    assert (tmp_path / "placas.json").stat().st_size < 2.5 * 1024 * 1024
+
+
+def test_payload_sem_placas_igual_fase1(linha, payload):
+    base = montar_payload(linha)
+    assert "placas" not in base and "placa" not in base["pastas"]
+    com = json.loads(json.dumps(payload))
+    com.pop("placas"), com["pastas"].pop("placa")
+    assert com == json.loads(json.dumps(base))
+
+
+def test_placa_das_pastas(payload):
+    pl = payload["pastas"]["placa"]
+    assert len(pl) == len(payload["pastas"]["pasta"]) and any(p is None for p in pl)
+    assert all(p is None or (len(p) == 7 and p.startswith("ZZ")) for p in pl)
+
+
+def test_html_abaixo_de_1mb(tmp_path, payload):
+    montar_html(payload, tmp_path / "i.html")
+    assert (tmp_path / "i.html").stat().st_size < 1.0 * 1024 * 1024

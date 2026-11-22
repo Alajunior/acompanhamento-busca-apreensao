@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from dados.gerar import HOJE, NOME_UF, simular
+from src import padroes
 from src.publicacao import LinhaDoTempo, linha_do_tempo
 from src.regra import COLUNAS, EXTINTAS, ORDEM_ACAO, ORDEM_FOLLOW, ORDEM_PROCESSUAL, TIPOS, chave
 
@@ -46,7 +47,7 @@ def _atributos(linha: LinhaDoTempo) -> pd.DataFrame:
     return todas.sort_values("_k").reset_index(drop=True)
 
 
-def montar_payload(linha: LinhaDoTempo) -> dict:
+def montar_payload(linha: LinhaDoTempo, cargas: list[dict] | None = None) -> dict:
     at = _atributos(linha)
     dic = {"tipo": list(TIPOS), "nome_uf": NOME_UF}
     pastas = {"pasta": at["_k"].tolist()}
@@ -75,10 +76,95 @@ def montar_payload(linha: LinhaDoTempo) -> dict:
         fotos.append({"dia": f.dia.isoformat(), "hora": f.hora, "origem": f.origem, "estado": estado})
         anterior = atual
 
-    return {"hoje": HOJE.date().isoformat(), "dic": dic,
-            "ordens": {"processual": list(ORDEM_PROCESSUAL), "follow": list(ORDEM_FOLLOW), "acao": list(ORDEM_ACAO),
-                       "extintas": list(EXTINTAS)},
-            "pastas": pastas, "fotos": fotos, "publicacoes": _limpo(linha.publicacoes), "fontes_bd": "bd.json"}
+    out = {"hoje": HOJE.date().isoformat(), "dic": dic,
+           "ordens": {"processual": list(ORDEM_PROCESSUAL), "follow": list(ORDEM_FOLLOW), "acao": list(ORDEM_ACAO),
+                      "extintas": list(EXTINTAS)},
+           "pastas": pastas, "fotos": fotos, "publicacoes": _limpo(linha.publicacoes), "fontes_bd": "bd.json"}
+    if cargas is not None:
+        pastas["placa"] = [padroes.normalizar_placa(v) for v in at["PLACA"]]
+        out["placas"] = _placas_payload(cargas, idx)
+    return out
+
+
+def _minutos(t: pd.Timestamp) -> int:
+    return int((t - HOJE).total_seconds() // 60)
+
+
+def _delta(anterior: dict | None, atual: dict) -> list | dict:
+    if anterior is None:
+        return [atual[i] for i in sorted(atual)]
+    return {"sai": sorted(set(anterior) - set(atual)), "muda": [atual[i] for i in sorted(atual) if anterior.get(i) != atual[i]]}
+
+
+def _placas_payload(cargas: list[dict], idx: dict) -> dict:
+    """Resumo por pasta de cada carga de capturas, em delta como as fotos: [i, ult_min, loc, n, n7, n30, est, dias, pp]."""
+    local, principal = {}, {}
+    est_cod = {e: k for k, e in enumerate(padroes.ESTADOS)}
+    saida, anterior = [], None
+    for c in cargas:
+        atual = {}
+        for pasta, v in c["pastas"].items():
+            if pasta not in idx:
+                continue
+            r = v["resumo"]
+            loc = local.setdefault(r["loc"], len(local))
+            pp = None if r["principal"] is None else principal.setdefault(r["principal"], len(principal))
+            atual[idx[pasta]] = [idx[pasta], _minutos(r["ult"]), loc, r["n"], r["n7"], r["n30"], est_cod[r["estado"]],
+                                 r["dias"], pp]
+        saida.append({"agora": c["agora"], "ate": c["ate"].strftime("%Y-%m-%dT%H:%M") if c["ate"] is not None else None,
+                      "falhou": c["falhou"], "estado": _delta(anterior, atual)})
+        anterior = atual
+    return {"dic": {"local": [list(k) for k in local], "principal": list(principal)},
+            "estados": list(padroes.ESTADOS), "rotulos": padroes.ROTULOS, "cores": padroes.CORES,
+            "sugestao": padroes.SUGESTAO, "cargas": saida}
+
+
+def _detalhe_compacto(d: dict, ends: dict, locs: dict) -> dict:
+    """Detalhe da pasta para o placas.json. Instantes em minutos desde 26/11 00:00; endereços e locais por índice:
+    ultima = {q, e, lat, lon, empresa, storage}; pontos = [[letra, lat, lon, dias, passagens, faixa, ultima, e, principal]];
+    ultimas = [[q, local]]; area = {vertices, km} | null."""
+    def e(x: dict) -> int:
+        return ends.setdefault(tuple(x[k] for k in ("rua", "numero", "bairro", "cidade", "uf", "cep")), len(ends))
+
+    def c(v):
+        return round(float(v), 5)
+
+    u = d["ultima"]
+    return {"ultima": {"q": _minutos(u["quando"]), "e": e(u), "lat": c(u["lat"]), "lon": c(u["lon"]),
+                       "empresa": u["empresa"], "storage": u["storage"]},
+            "pontos": [[p["letra"], c(p["lat"]), c(p["lon"]), p["dias"], p["passagens"], p["faixa"], _minutos(p["ultima"]),
+                        e(p["endereco"]), p["principal"]] for p in d["pontos"]],
+            "sequencia": d["sequencia"],
+            "area": None if d["area"] is None else {"vertices": [[c(a), c(b)] for a, b in d["area"]["vertices"]],
+                                                    "km": d["area"]["km"]},
+            "semana": d["semana"], "horas": d["horas"],
+            "ultimas": [[_minutos(q), locs.setdefault(l, len(locs))] for q, l in d["ultimas"]],
+            "perto_de_casa": d["perto_de_casa"]}
+
+
+def _texto_banco(b: dict) -> str:
+    linha1 = ", ".join(str(x) for x in (b.get("ENDERECO"), b.get("NUMERO"), b.get("COMPLEMENTO")) if x and not pd.isna(x))
+    cid = "/".join(str(x) for x in (b.get("CIDADE"), b.get("UF")) if x)
+    return " · ".join(x for x in (linha1, ", ".join(y for y in (b.get("BAIRRO"), cid) if y),
+                                  f"CEP {b['CEP']}" if b.get("CEP") else "") if x)
+
+
+def montar_placas(cargas: list[dict], bancos: dict[str, dict], payload: dict, saida: Path) -> None:
+    """docs/placas.json: detalhe de cada pasta por carga (delta) e o endereço do banco; carregado sob demanda."""
+    idx = {k: i for i, k in enumerate(payload["pastas"]["pasta"])}
+    out, anterior, ends, locs = [], None, {}, {}
+    for c in cargas:
+        atual = {idx[p]: _detalhe_compacto(v["detalhe"], ends, locs) for p, v in c["pastas"].items() if p in idx}
+        if anterior is None:
+            out.append({str(i): atual[i] for i in sorted(atual)})
+        else:
+            out.append({"sai": sorted(set(anterior) - set(atual)),
+                        "muda": {str(i): atual[i] for i in sorted(atual) if anterior.get(i) != atual[i]}})
+        anterior = atual
+    banco = {str(idx[p]): _texto_banco(b) for p, b in bancos.items() if p in idx}
+    saida.write_text(json.dumps({"enderecos": [list(k) for k in ends], "locais": list(locs), "cargas": out, "banco": banco},
+                                ensure_ascii=False, allow_nan=False,
+                                separators=(",", ":")), encoding="utf-8")
 
 
 def _limpo(x):
@@ -139,12 +225,14 @@ def montar_bd(linha: LinhaDoTempo, payload: dict, saida: Path) -> None:
 
 
 def main() -> None:
-    linha = linha_do_tempo(simular(42))
-    payload = montar_payload(linha)
+    sim = simular(42)
+    linha = linha_do_tempo(sim)
+    cargas = padroes.cargas(sim)
+    payload = montar_payload(linha, cargas)
     montar_html(payload, RAIZ / "docs" / "index.html")
     montar_bd(linha, payload, RAIZ / "docs" / "bd.json")
-    print(f"docs/index.html: {(RAIZ / 'docs' / 'index.html').stat().st_size / 1024:.0f} KB · "
-          f"docs/bd.json: {(RAIZ / 'docs' / 'bd.json').stat().st_size / 1024:.0f} KB")
+    montar_placas(cargas, padroes.bancos_por_pasta(sim), payload, RAIZ / "docs" / "placas.json")
+    print(" · ".join(f"docs/{a}: {(RAIZ / 'docs' / a).stat().st_size / 1024:.0f} KB" for a in ("index.html", "bd.json", "placas.json")))
 
 
 if __name__ == "__main__":
