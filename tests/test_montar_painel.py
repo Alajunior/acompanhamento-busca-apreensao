@@ -146,7 +146,7 @@ def test_placas_json_sem_nan(tmp_path, payload, cargas, sim):
 def test_payload_sem_placas_igual_fase1(linha, payload):
     base = montar_payload(linha)
     assert "placas" not in base and "placa" not in base["pastas"]
-    com = json.loads(json.dumps(payload))
+    com = json.loads(json.dumps({k: v for k, v in payload.items() if not k.startswith("_")}))   # caches da referência
     com.pop("placas"), com["pastas"].pop("placa")
     assert com == json.loads(json.dumps(base))
 
