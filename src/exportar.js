@@ -35,6 +35,8 @@
       L("Mandado negativo (%)", (u) => r2(u.pct_negativo))];
     ETAPAS.forEach((e, i) => { out.push(L(`Etapa: ${e} (qtd)`, (u) => u.etapas[i][1]));
       out.push(L(`Etapa: ${e} (%)`, (u) => r2(pct(u.etapas[i][1], u.kpis.processos)))); });
+    if (G.brasil.localizados) out.push(L("Veículos localizados 30 dias", (u) => u.localizados.d30),
+      L("% da carteira localizada (30 dias)", (u) => r2(u.localizados.pct)));
     const lead = (lista) => { const x = lista.find(([k]) => !k.startsWith("(") && k !== "sem ano"); return x ? x[0] : null; };
     out.push(L("Advogados", (u) => u.advogados.qtd), L("Advogado com mais processos", (u) => (u.advogados.mais ? `${u.advogados.mais[0]} | ${u.advogados.mais[1]}` : null)),
       L("Produto mais frequente", (u) => lead(u.perfil.produto)), L("Faixa de idade mais frequente", (u) => lead(u.perfil.idade)),
@@ -46,6 +48,8 @@
     produtivos: (R) => { const t = tabela("Agendamento", R.tabelas.produtivos); return [t.cab, t.linhas]; },
     follow: (R) => { const t = tabela("Fase", R.tabelas.follow); return [t.cab, t.linhas]; },
     diligencia: (R) => { const t = tabela("Diligência", R.tabelas.diligencia); return [t.cab, t.linhas]; },
+    localizacao: (R) => [["Etapa", "24 horas", "7 dias", "30 dias", "Sugestão"], R.localizado
+      ? [...R.localizado.por_etapa, ["Total (todas as etapas)", ...R.localizado.total_etapas, ""]] : []],
     escada: (R) => [["Tentativa", "REQUERIDO", "EXPEDIDO", "NEGATIVO", "Total", "Chegou %"],
       R.escada ? R.escada.linhas.map((l) => [l.tentativa, l.REQUERIDO, l.EXPEDIDO, l.NEGATIVO, l.total, r2(l.chegou)]) : []],
     prazos: (R) => [["Etapa", "vencidos", "hoje", "7 dias", "depois", "sem data"], R.prazos],

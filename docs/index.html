@@ -175,6 +175,31 @@ body[data-theme="light"] .advcab{color:#fff}
 .mapa .dica{position:absolute;pointer-events:none;background:var(--thead);color:#fff;font-size:12px;padding:6px 9px;border-radius:8px;opacity:0;transition:opacity .12s;white-space:nowrap;z-index:3}
 .mapa .brasil{position:absolute;right:6px;top:6px;opacity:0;transform:translateY(-4px);transition:.25s;pointer-events:none}
 .mapa .brasil.on{opacity:1;transform:none;pointer-events:auto}
+/* veículo localizado */
+.glass.loc{border-left:4px solid var(--compB)}
+.trac{border:1px dashed var(--warn);color:var(--t3);border-radius:10px;padding:7px 11px;font-size:12.5px;margin:0 0 10px}
+.locest{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12.5px;color:var(--t2);margin-bottom:12px}
+.tag{display:inline-flex;align-items:center;gap:6px;font:700 12px Inter;padding:3px 10px;border-radius:999px;border:1px solid var(--bd-i);color:var(--t3);white-space:nowrap}
+.tag i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.loctopo{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:14px}
+.janelas{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.janelas b{display:block;font:800 26px Sora;color:var(--strong);font-variant-numeric:tabular-nums}
+.janelas b.animating{color:var(--ac-anim);text-shadow:0 0 12px var(--ac-anim-glow)}
+.janelas span{font-size:12px;color:var(--t2)}
+.regua{position:relative;height:10px;background:var(--grid0);border-radius:5px;margin:10px 0 8px;overflow:hidden}
+.regua i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--compB);transition:width .6s cubic-bezier(.2,.7,.2,1)}
+.loctiles{display:grid;gap:10px}
+.locgrid{display:grid;grid-template-columns:1.45fr 1fr .85fr;gap:16px;align-items:start}
+.locgrid>*{min-width:0}
+.t td.z{color:var(--t2);opacity:.55} .t td.nz{font-weight:800}
+.t td.sug{text-align:left;white-space:normal;color:var(--t3);font-size:12px;min-width:180px}
+.t td.sug::before{content:"Sugestão: ";color:var(--t2)}
+.rec{border-top:1px solid var(--bd);padding:7px 0;font-size:12.5px}
+.rec:first-child{border-top:0}
+.rec .lin{display:flex;justify-content:space-between;gap:8px}
+.rec .lin span{color:var(--t2);white-space:nowrap}
+.selo-uf{font:800 10px Inter;color:var(--warn);border:1px solid var(--warn);border-radius:999px;padding:0 6px;margin-left:5px}
+@media(max-width:1100px){.locgrid,.loctopo{grid-template-columns:1fr}}
 /* região */
 .reg-cab{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin-bottom:12px}
 .reg-cab .uf{font:800 30px Sora;color:var(--strong)}
@@ -259,6 +284,22 @@ body.estatico *,body.estatico *::before,body.estatico *::after{animation:none!im
 <!-- =================== Operação =================== -->
 <section id="v-oper">
   <div class="kpis" id="kpis"></div>
+  <div class="glass loc oculto" data-card="localizacao" id="card-loc"><div class="ctitle">Veículo localizado <span class="muted" id="loc-ate"></span><button class="hbtn" data-h="h-loc">ⓘ</button><button class="hbtn" data-csv="localizacao">CSV</button></div>
+    <p class="desc">Placas dos processos vistas por câmeras de leitura de placa; cada pasta conta uma vez, pela captura mais recente. Vale para os filtros.</p>
+    <div class="help" id="h-loc"><b>Como ler:</b> as três janelas contam as pastas cujo veículo foi visto por último há até 24 horas, 7 dias e 30 dias; cada uma contém a anterior. A tabela diz em que etapa estão esses processos e o que dá para fazer com a localização em cada uma. "Fora da UF" = a câmera viu o veículo em outro estado, não no do processo. As capturas são recarregadas a cada leitura; se uma leitura falha, o card mantém a anterior e avisa.</div>
+    <div class="trac oculto" id="loc-aviso" role="status"></div>
+    <div class="locest" id="loc-est"></div>
+    <div class="loctopo">
+      <div><div class="janelas"><div><b id="loc-j24">0</b><span>nas últimas 24 horas</span></div><div><b id="loc-j7">0</b><span>em 7 dias</span></div><div><b id="loc-j30">0</b><span>em 30 dias</span></div></div>
+        <div class="regua" aria-hidden="true"><i id="rg30" style="opacity:.35;width:0"></i><i id="rg7" style="opacity:.6;width:0"></i><i id="rg24" style="width:0"></i></div>
+        <p class="muted" id="loc-leg"></p></div>
+      <div class="loctiles" id="loc-tiles"></div>
+    </div>
+    <div class="locgrid">
+      <div><div class="lb">Por etapa, na ordem de ação</div><div id="loc-etapa"></div></div>
+      <div><div class="lb">Mais recentes, últimas 24 horas</div><div id="loc-rec"></div><p class="regra">Lista completa na exportação (botão Exportar Excel, aba Localizados).</p></div>
+      <div><div class="lb">Cidades com mais veículos, 30 dias</div><div id="loc-cid"></div></div>
+    </div></div>
   <div class="g2">
     <div class="glass" data-card="escada"><div class="ctitle">Escada de mandados<button class="hbtn" data-h="h-escada">ⓘ</button><button class="hbtn" data-csv="escada">CSV</button></div>
       <p class="desc">Tentativa × situação do mandado. "Chegou" = % dos processos em mandado que alcançaram a tentativa. 1º mandado requerido não aparece porque não faz parte dos tipos da regra oficial.</p>
@@ -277,8 +318,10 @@ body.estatico *,body.estatico *::before,body.estatico *::after{animation:none!im
         <span class="sp"></span><div class="seg" id="segVistaAdv"><button data-vista="barras" class="on">Barras</button><button data-vista="disp">Processos × % vencidos</button></div></div>
       <div id="c-adv"></div><div class="chart h340 oculto" id="b-disp"><canvas id="g-disp"></canvas></div>
       <div class="legenda" id="leg-adv"></div><div class="regra" id="regra-adv"></div></div>
-    <div class="glass" data-card="uf"><div class="ctitle" id="t-mapa">Agendamentos por UF<button class="hbtn" data-h="h-mapa">ⓘ</button><button class="hbtn" data-csv="uf">CSV</button></div>
+    <div class="glass" data-card="uf"><div class="ctitle"><span id="t-mapa">Agendamentos por UF</span><button class="hbtn" data-h="h-mapa">ⓘ</button><button class="hbtn" data-csv="uf">CSV</button></div>
       <p class="desc">Clique nos estados para filtrar (vários de uma vez). O mapa ignora o filtro de UF, para permitir somar estados.</p>
+      <div class="seg" id="segMapa" style="margin-bottom:8px"><button data-mapa="proc" class="on">Processos</button><button data-mapa="loc">Veículos localizados (30 dias)</button></div>
+      <p class="regra oculto" id="mapa-nota">Pela UF onde a câmera viu o veículo. O clique continua filtrando pela UF do processo.</p>
       <div class="help" id="h-mapa"><b>Como ler:</b> quanto mais forte a cor, mais processos na UF. Clique em um ou mais estados para filtrar o painel inteiro; o mapa aproxima as UFs escolhidas, e "Brasil inteiro" desfaz.</div>
       <div class="mapa" id="mapa"><button class="chip brasil" id="brasil">Brasil inteiro</button><div class="dica" id="dica"></div></div>
       <div class="legenda" id="leg-mapa"></div></div>
@@ -534,25 +577,27 @@ const MAPA_UF = {"fonte":"codeforgermany/click_that_hood brazil-states.geojson",
     });
   }
 
-  function resumoRegiao(rows, h) {
+  function resumoRegiao(rows, h, v30) {
     const k = kpis(rows, h), n = k.processos;
     const riscos = rows.filter((r) => r.risco !== null).map((r) => r.risco);
     const neg = conta(rows, (r) => r.fase === "MANDADO NEGATIVO");
     const advs = contar(rows.filter((r) => r.adv !== SEM_ADV), (r) => r.adv);
     const mais = advs.size ? [...advs.keys()].sort(porChaves((a) => [-advs.get(a), a]))[0] : null;
     const p = {}; for (const c of ["vencidos", "hoje", "prox7", "diligencia"]) p[c] = pct(k[c], n);
-    return { kpis: k, pct: p, negativo: neg, pct_negativo: pct(neg, n),
+    const out = { kpis: k, pct: p, negativo: neg, pct_negativo: pct(neg, n),
       risco_medio: riscos.length ? soma(riscos) / riscos.length : null,
       etapas: ETAPAS.map((e) => [e, conta(rows, (r) => r.fase === e)]), perfil: perfil(rows, 5), comarcas: comarcas(rows, 5),
       advogados: { qtd: advs.size, sem_advogado: conta(rows, (r) => r.adv === SEM_ADV),
         mais: mais ? [mais, advs.get(mais), (advs.get(mais) / n) * 100] : null } };
+    if (v30) { const d30 = conta(rows, (r) => v30.has(r.i)); out.localizados = { d30, pct: pct(d30, n) }; }
+    return out;
   }
 
-  function regioes(semUF, ufs, h) {
+  function regioes(semUF, ufs, h, v30) {
     if (!ufs.length) return null;
-    const brasil = resumoRegiao(semUF, h);
+    const brasil = resumoRegiao(semUF, h, v30);
     const out = [...ufs].sort(cmp).map((uf) => {
-      const r = resumoRegiao(semUF.filter((x) => x.uf === uf), h);
+      const r = resumoRegiao(semUF.filter((x) => x.uf === uf), h, v30);
       r.uf = uf; r.part_processos = pct(r.kpis.processos, brasil.kpis.processos);
       r.part_risco = brasil.kpis.risco ? (r.kpis.risco / brasil.kpis.risco) * 100 : null;
       return r;
@@ -695,14 +740,114 @@ const MAPA_UF = {"fonte":"codeforgermany/click_that_hood brazil-states.geojson",
       const f = pl.fotos[k];
       return { kpis: kpis(filtrar(linhas(pl, k), filtros, pl), offset(pl, f.dia)), dia: f.dia, hora: f.hora, origem: f.origem };
     };
-    return { kpis: { atual: kpis(rows, 0), inicio: ref(pub.base), anterior: ref(pub.anterior) },
+    const temPlacas = !!pl.placas, v30 = temPlacas ? vistos30(pl, agora) : null;
+    const out = { kpis: { atual: kpis(rows, 0), inicio: ref(pub.base), anterior: ref(pub.anterior) },
       tabelas: tabelas(rows, pl.ordens.follow), escada: escada(rows), prazos: prazos(rows, 0), advogados: advogados(rows, 0),
-      mapa_uf: mapaUF(semUF), regioes: regioes(semUF, filtros.uf || [], 0), movimentacao: movimentacao(pl, pub, filtros),
+      mapa_uf: mapaUF(semUF), regioes: regioes(semUF, filtros.uf || [], 0, v30), movimentacao: movimentacao(pl, pub, filtros),
       destaques: destaques(rows, 0), risco_etapa: riscoEtapa(rows), risco_uf: riscoUF(rows), carteira_etapa: carteiraEtapa(rows),
       comarcas: comarcas(rows, 15), perfil: perfil(rows, 10), evolucao: evolucao(pl, pub, filtros) };
+    if (temPlacas) { out.localizado = localizado(pl, rows, agora); out.mapa_localizados = mapaLocalizados(pl, semUF, agora); }
+    return out;
   }
 
-  const A = { ETAPAS, tudo, linhas, filtrar, kpis, fmtInt, fmtRS, fmtPct0, arred, faseDe, offset };
+  // ---------- placas (inv. §2.1 "Veículo localizado", §7) ----------
+  const JANELAS = [24 * 60, 7 * 24 * 60, 30 * 24 * 60];
+  const ESTADOS_PADRAO = ["PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO", "SEM_CAPTURA_RECENTE"];
+  const minutosAgora = (a) => Number(a.slice(0, 2)) * 60 + Number(a.slice(3));
+  const cargaK = (pl, agora) => pl.placas.cargas.findIndex((c) => c.agora === agora);
+  const soAlnum = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+  function placasEstado(pl, k) {
+    if (!pl.__cachePlacas) {
+      const out = []; let atual = new Map();
+      for (const c of pl.placas.cargas) {
+        const e = c.estado;
+        if (Array.isArray(e)) { atual = new Map(); for (const r of e) atual.set(r[0], r); }
+        else { atual = new Map(atual); for (const i of e.sai) atual.delete(i); for (const r of e.muda) atual.set(r[0], r); }
+        out.push(atual);
+      }
+      Object.defineProperty(pl, "__cachePlacas", { value: out, enumerable: false });
+    }
+    return pl.__cachePlacas[k];
+  }
+
+  function estadoPasta(pl, est, i) {
+    if (pl.pastas.placa[i] === null) return "SEM_PLACA";
+    if (!est.has(i)) return "SEM_CAPTURA";
+    return pl.placas.estados[est.get(i)[6]];
+  }
+
+  function vistos30(pl, agora) {
+    const ag = minutosAgora(agora), est = placasEstado(pl, cargaK(pl, agora)), out = new Set();
+    for (const [i, r] of est) if (ag - r[1] <= JANELAS[2]) out.add(i);
+    return out;
+  }
+
+  const rotuloCaptura = ([cidade, uf, bairro]) => {
+    const cid = [cidade, uf].filter(Boolean).join("/");
+    return [cid, bairro].filter(Boolean).join(", ") || "local não informado";
+  };
+
+  function localizado(pl, rows, agora) {
+    const P = pl.placas, k = cargaK(pl, agora), carga = P.cargas[k], est = placasEstado(pl, k), ag = minutosAgora(agora);
+    const locs = P.dic.local, acao = pl.ordens.acao, placa = pl.pastas.placa;
+    const vis = rows.filter((r) => est.has(r.i)).map((r) => [r, est.get(r.i), ag - est.get(r.i)[1]]);
+    const [j24, j7, j30] = JANELAS.map((lim) => vis.filter((v) => v[2] <= lim));
+    const fora = (v) => { const ufc = locs[v[1][2]][1]; return ufc !== null && ufc !== v[0].uf; };
+    const nFora = conta(j30, fora);
+    const cid = new Map();
+    for (const v of j30) {
+      const [c, u] = locs[v[1][2]];
+      if (c !== null) { const kk = c + "\u0000" + u; cid.set(kk, (cid.get(kk) || 0) + 1); }
+    }
+    const ordem = new Map(acao.map((e, n) => [e, n]));
+    const ord = (f) => (ordem.has(f) ? ordem.get(f) : 99);
+    const rec = [...j24].sort(porChaves((v) => [ord(v[0].fase), v[2], v[0].pasta])).slice(0, 10);
+    const estados = {}; for (const e of P.estados) estados[e] = 0;
+    for (const r of rows) estados[estadoPasta(pl, est, r.i)]++;
+    const comPlaca = conta(rows, (r) => placa[r.i] !== null);
+    const cidades = [...cid.entries()].map(([kk, n]) => [...kk.split("\u0000"), n])
+      .sort(porChaves((x) => [-x[2], x[0], x[1]])).slice(0, 10).map(([c, u, n]) => [c, u, n, (n / j30.length) * 100]);
+    const out = { ate: carga.ate, falhou: carga.falhou, base: rows.length, com_placa: comPlaca, total: vis.length,
+      j24: j24.length, j7: j7.length, j30: j30.length, fora_uf: nFora, pct_fora: pct(nFora, j30.length),
+      pct_vistos30: pct(j30.length, comPlaca),
+      por_etapa: acao.map((e) => [e, ...[j24, j7, j30].map((j) => conta(j, (v) => v[0].fase === e)), P.sugestao[e]]),
+      total_etapas: [j24.length, j7.length, j30.length],
+      recentes: rec.map((v) => ({ pasta: v[0].pasta, etapa: v[0].fase, min: v[2], quando: v[1][1],
+        local: rotuloCaptura(locs[v[1][2]]), fora: fora(v) })),
+      cidades, estados };
+    if (carga.falhou) out.falhou_de = P.cargas[k - 1].agora;
+    return out;
+  }
+
+  function mapaLocalizados(pl, semUF, agora) {
+    const est = placasEstado(pl, cargaK(pl, agora)), ag = minutosAgora(agora), locs = pl.placas.dic.local, out = {};
+    for (const r of semUF) {
+      const v = est.get(r.i);
+      if (v && ag - v[1] <= JANELAS[2] && locs[v[2]][1] !== null) out[locs[v[2]][1]] = (out[locs[v[2]][1]] || 0) + 1;
+    }
+    return out;
+  }
+
+  function listaPadroes(pl, agora, filtros, estados, busca) {
+    const pub = pl.publicacoes.find((p) => p.agora === agora);
+    const est = placasEstado(pl, cargaK(pl, agora)), P = pl.placas, placa = pl.pastas.placa;
+    const oa = new Map(pl.ordens.acao.map((e, n) => [e, n])), oe = new Map(P.estados.map((e, n) => [e, n]));
+    const quer = new Set(estados), b = soAlnum(busca);
+    const out = [];
+    for (const r of filtrar(linhas(pl, pub.foto), filtros, pl)) {
+      const e = estadoPasta(pl, est, r.i);
+      if (!quer.has(e) || (b && !soAlnum(r.pasta).includes(b) && !soAlnum(placa[r.i]).includes(b))) continue;
+      const v = est.get(r.i);
+      out.push({ i: r.i, pasta: r.pasta, etapa: r.fase, estado: e, dias: v ? v[7] : null,
+        principal: v && v[8] !== null ? P.dic.principal[v[8]] : null, ult: v ? v[1] : null });
+    }
+    return out.sort(porChaves((x) => [oa.has(x.etapa) ? oa.get(x.etapa) : 99, oe.get(x.estado),
+      x.ult !== null ? -x.ult : Infinity, x.pasta]));
+  }
+
+  const A = { ETAPAS, tudo, linhas, filtrar, kpis, fmtInt, fmtRS, fmtPct0, arred, faseDe, offset,
+    ESTADOS_PADRAO, listaPadroes, placasEstado, estadoPasta, cargaK, minutosAgora, rotuloCaptura, soAlnum };
   g.Agregar = A;
   if (typeof module !== "undefined" && module.exports) module.exports = A;
 })(typeof window !== "undefined" ? window : globalThis);
@@ -746,6 +891,8 @@ const MAPA_UF = {"fonte":"codeforgermany/click_that_hood brazil-states.geojson",
       L("Mandado negativo (%)", (u) => r2(u.pct_negativo))];
     ETAPAS.forEach((e, i) => { out.push(L(`Etapa: ${e} (qtd)`, (u) => u.etapas[i][1]));
       out.push(L(`Etapa: ${e} (%)`, (u) => r2(pct(u.etapas[i][1], u.kpis.processos)))); });
+    if (G.brasil.localizados) out.push(L("Veículos localizados 30 dias", (u) => u.localizados.d30),
+      L("% da carteira localizada (30 dias)", (u) => r2(u.localizados.pct)));
     const lead = (lista) => { const x = lista.find(([k]) => !k.startsWith("(") && k !== "sem ano"); return x ? x[0] : null; };
     out.push(L("Advogados", (u) => u.advogados.qtd), L("Advogado com mais processos", (u) => (u.advogados.mais ? `${u.advogados.mais[0]} | ${u.advogados.mais[1]}` : null)),
       L("Produto mais frequente", (u) => lead(u.perfil.produto)), L("Faixa de idade mais frequente", (u) => lead(u.perfil.idade)),
@@ -757,6 +904,8 @@ const MAPA_UF = {"fonte":"codeforgermany/click_that_hood brazil-states.geojson",
     produtivos: (R) => { const t = tabela("Agendamento", R.tabelas.produtivos); return [t.cab, t.linhas]; },
     follow: (R) => { const t = tabela("Fase", R.tabelas.follow); return [t.cab, t.linhas]; },
     diligencia: (R) => { const t = tabela("Diligência", R.tabelas.diligencia); return [t.cab, t.linhas]; },
+    localizacao: (R) => [["Etapa", "24 horas", "7 dias", "30 dias", "Sugestão"], R.localizado
+      ? [...R.localizado.por_etapa, ["Total (todas as etapas)", ...R.localizado.total_etapas, ""]] : []],
     escada: (R) => [["Tentativa", "REQUERIDO", "EXPEDIDO", "NEGATIVO", "Total", "Chegou %"],
       R.escada ? R.escada.linhas.map((l) => [l.tentativa, l.REQUERIDO, l.EXPEDIDO, l.NEGATIVO, l.total, r2(l.chegou)]) : []],
     prazos: (R) => [["Etapa", "vencidos", "hoje", "7 dias", "depois", "sem data"], R.prazos],
@@ -871,7 +1020,7 @@ const COR_ETAPA_CLARO = ["#2b8ccf", "#b87a00", "#00795a", "#a94f85", "#005a8c", 
 const corEtapa = i => (document.body.dataset.theme === "light" ? COR_ETAPA_CLARO : COR_ETAPA)[i];
 
 /* ======================= estado ======================= */
-const S = {agora: "17:05", aba: "oper", ordAdv: "processos", vistaAdv: "barras", ce: "qtd", R: null,
+const S = {agora: "17:05", aba: "oper", mapa: "proc", ordAdv: "processos", vistaAdv: "barras", ce: "qtd", R: null,
            f: {uf: [], carteira: [], adv: [], etapa: [], produto: [], de: null, ate: null}};
 const graf = {};
 const pubAtual = () => D.publicacoes.find(p => p.agora === S.agora);
@@ -1098,9 +1247,11 @@ function iniciarMapa() {
   const vb = MAPA_UF.viewBox.split(" ").map(Number);
   MAPA = {svg, paths, gSel, gHover, vb, atual: vb.slice()};
 }
+const modoLoc = R => S.mapa === "loc" && !!R.mapa_localizados;
 function mostrarDica(uf, ev) {
   const m = S.R.mapa_uf[uf] || [0, 0, 0], dica = $("dica"), box = $("mapa").getBoundingClientRect();
-  dica.innerHTML = `<b>${uf}</b><br>${int(m[0])} processos<br>${brlC(m[1])} de risco`;
+  if (modoLoc(S.R)) { const n = S.R.mapa_localizados[uf] || 0; dica.innerHTML = `<b>${uf}</b><br>${int(n)} ${n === 1 ? "veículo localizado" : "veículos localizados"} em 30 dias`; }
+  else dica.innerHTML = `<b>${uf}</b><br>${int(m[0])} processos<br>${brlC(m[1])} de risco`;
   const r = ev.clientX ? {x: ev.clientX, y: ev.clientY} : (() => { const b = ev.target.getBoundingClientRect(); return {x: b.x + b.width / 2, y: b.y}; })();
   dica.style.left = Math.min(box.width - 140, Math.max(0, r.x - box.left + 12)) + "px"; dica.style.top = (r.y - box.top + 12) + "px"; dica.style.opacity = 1;
   MAPA.gHover.innerHTML = ""; const c = MAPA.paths[uf].cloneNode(); c.removeAttribute("tabindex"); c.style.cssText = `fill:none;stroke:${css("--strong")};stroke-width:1.6;pointer-events:none`; MAPA.gHover.appendChild(c);
@@ -1115,7 +1266,14 @@ function animarViewBox(alvo) {
 }
 function renderMapa(R) {
   if (!MAPA) iniciarMapa();
-  const m = R.mapa_uf, max = Math.max(1, ...Object.values(m).map(v => v[0])), base = css("--compA"), sel = S.f.uf, claro = document.body.dataset.theme === "light";
+  const loc = modoLoc(R);
+  if (!R.mapa_localizados && S.mapa === "loc") S.mapa = "proc";
+  const bLoc = QS('#segMapa [data-mapa="loc"]')[0];
+  bLoc.disabled = !R.mapa_localizados; bLoc.title = R.mapa_localizados ? "" : "Fonte de capturas de placa indisponível";
+  QS("#segMapa [data-mapa]").forEach(b => b.classList.toggle("on", b.dataset.mapa === (loc ? "loc" : "proc")));
+  $("t-mapa").textContent = loc ? "Veículos localizados por UF (30 dias)" : "Agendamentos por UF"; mostrar("mapa-nota", loc);
+  const m = loc ? Object.fromEntries(Object.entries(R.mapa_localizados).map(([u, n]) => [u, [n]])) : R.mapa_uf;
+  const max = Math.max(1, ...Object.values(m).map(v => v[0])), base = css(loc ? "--compB" : "--compA"), sel = S.f.uf, claro = document.body.dataset.theme === "light";
   for (const [uf, p] of Object.entries(MAPA.paths)) {
     const q = (m[uf] || [0])[0];
     p.style.fill = q ? rgba(base, .18 + .82 * q / max) : css("--grid0");
@@ -1134,7 +1292,7 @@ function renderMapa(R) {
     animarViewBox([(xa + xb) / 2 - lado / 2, (ya + yb) / 2 - alt / 2, lado, alt]);
   }
   const topo = Object.entries(m).sort((a, b) => b[1][0] - a[1][0] || (a[0] < b[0] ? -1 : 1)).slice(0, 6);
-  $("leg-mapa").innerHTML = topo.map(([uf, v]) => `<span><b>${uf}</b> ${int(v[0])}</span>`).join("");
+  $("leg-mapa").innerHTML = (loc && topo.length ? "<span>Mais veículos vistos:</span>" : "") + topo.map(([uf, v]) => `<span><b>${uf}</b> ${int(v[0])}</span>`).join("");
 }
 
 /* ---------- detalhe da região ---------- */
@@ -1159,6 +1317,11 @@ function tileReg(rot, u, b, campo, ruim) {
   const cls = !ruim || !ok(d) || Math.abs(d) < .05 ? "" : d > 0 ? "down-t" : "up-t";
   return `<div class="tile"><div class="tl">${rot}</div><div class="tv">${p1(vu)}</div><div class="ts">${int(u.kpis[campo])} processos</div><div class="ts">Brasil ${p1(vb)} · <span class="${cls}">${ppTxt(d)}</span></div></div>`;
 }
+function tileLoc(u, b) {
+  if (!u.localizados) return "";
+  const vu = u.localizados.pct, vb = b.localizados.pct, d = ok(vu) && ok(vb) ? vu - vb : null;
+  return `<div class="tile"><div class="tl">Veículo localizado por câmera (30 dias)</div><div class="tv">${p1(vu)}</div><div class="ts">${int(u.localizados.d30)} processos</div><div class="ts">Brasil ${p1(vb)} · ${ppTxt(d)}</div></div>`;
+}
 function regiaoUma(u, b) {
   const negD = ok(u.pct_negativo) && ok(b.pct_negativo) ? u.pct_negativo - b.pct_negativo : null;
   const rel = ok(u.risco_medio) && ok(b.risco_medio) && b.risco_medio ? (u.risco_medio / b.risco_medio - 1) * 100 : null;
@@ -1170,7 +1333,7 @@ function regiaoUma(u, b) {
   return `<div class="reg-cab"><span class="uf">${u.uf}</span><span class="muted">${esc(NOME_UF[u.uf] || "")}</span><span><b>${int(n)}</b> processos, ${p1(u.part_processos)} do Brasil</span><span><b>${brlC(u.kpis.risco)}</b> de risco, ${p1(u.part_risco)} do Brasil</span></div>
     <div class="tiles">${tileReg("Vencidos (data de agendamento já passou)", u, b, "vencidos", true)}${tileReg("Vencem hoje", u, b, "hoje", true)}${tileReg("Próximos 7 dias", u, b, "prox7", false)}${tileReg("Em diligência (1º mandado expedido)", u, b, "diligencia", false)}
       <div class="tile"><div class="tl">Em mandado negativo</div><div class="tv">${p1(u.pct_negativo)}</div><div class="ts">${int(u.negativo)} processos</div><div class="ts">Brasil ${p1(b.pct_negativo)} · <span class="${!ok(negD) || Math.abs(negD) < .05 ? "" : negD > 0 ? "down-t" : "up-t"}">${ppTxt(negD)}</span></div></div>
-      <div class="tile"><div class="tl">Risco médio por processo</div><div class="tv">${brlC(u.risco_medio)}</div><div class="ts">Brasil ${brlC(b.risco_medio)}${ok(rel) && Math.abs(rel) >= .05 ? ` · ${rel > 0 ? "+" : MENOS}${f1.format(Math.abs(rel))}%` : ""}</div></div></div>
+      <div class="tile"><div class="tl">Risco médio por processo</div><div class="tv">${brlC(u.risco_medio)}</div><div class="ts">Brasil ${brlC(b.risco_medio)}${ok(rel) && Math.abs(rel) >= .05 ? ` · ${rel > 0 ? "+" : MENOS}${f1.format(Math.abs(rel))}%` : ""}</div></div>${tileLoc(u, b)}</div>
     <div class="g2"><div><div class="lb">Etapas (barra = UF, traço = Brasil)</div>${etapas}</div>
       <div><div class="lb">Comarcas com mais processos</div>${com}
         <div class="lb" style="margin-top:12px">Advogados</div><div class="muted"><b>${int(adv.qtd)}</b> advogados com processos na UF${adv.mais ? `<br>Com mais processos: ${esc(adv.mais[0])}, <b>${int(adv.mais[1])}</b> (${f1.format(adv.mais[2])}% da UF)` : ""}${adv.sem_advogado ? `<br>Sem advogado operacional: <b>${int(adv.sem_advogado)}</b>` : ""}</div></div></div>
@@ -1196,7 +1359,9 @@ function regiaoColunas(g) {
     linha("Vencem hoje", u => u.pct.hoje, p1, "todas", true, u => u.kpis.hoje), linha("Próximos 7 dias", u => u.pct.prox7, p1, "todas", false, u => u.kpis.prox7),
     linha("Em diligência (1º mandado expedido)", u => u.pct.diligencia, p1, "todas", false, u => u.kpis.diligencia),
     grp("Etapas, em % dos processos da região"), ...ETAPAS.map((e, i) => linha(e, u => u.kpis.processos ? u.etapas[i][1] / u.kpis.processos * 100 : null, p1, "todas", e === "MANDADO NEGATIVO", u => u.etapas[i][1])),
-    grp("Equipe, comarcas e veículo"), linha("Advogados", u => u.advogados.qtd, int, "ufs"),
+    grp("Equipe, comarcas e veículo"),
+    ...(B.localizados ? [linha("Veículos localizados (30 dias)", u => u.localizados.d30, int, "ufs"), linha("% da carteira localizada (30 dias)", u => u.localizados.pct, p1, "todas")] : []),
+    linha("Advogados", u => u.advogados.qtd, int, "ufs"),
     txt("Advogado com mais processos", u => u.advogados.mais ? `${esc(u.advogados.mais[0])}: ${int(u.advogados.mais[1])} (${fI.format(u.advogados.mais[2])}%)` : "—"),
     txt("Comarcas com mais processos", u => u.comarcas.slice(0, 3).map(c => `${esc(c[0])}: ${int(c[2])}`).join("<br>") || "—"),
     txt("Produto mais frequente", perf("produto")), txt("Idade do veículo mais frequente", perf("idade")), txt("Marca líder", perf("marcas"))];
@@ -1207,7 +1372,8 @@ let ORD_REG = {col: "processos", desc: true};
 const COLS_REG = [["uf", "UF", u => u.uf, x => x], ["processos", "Processos", u => u.kpis.processos, int], ["part", "% do Brasil", u => u.part_processos ?? null, p1],
   ["risco", "Risco", u => u.kpis.risco, brlC], ["rmed", "Risco médio", u => u.risco_medio, brlC], ["venc", "% vencidos", u => u.pct.vencidos, p1, true],
   ["hoje", "% hoje", u => u.pct.hoje, p1, true], ["p7", "% 7 dias", u => u.pct.prox7, p1], ["dil", "% em diligência", u => u.pct.diligencia, p1],
-  ["neg", "% mandado negativo", u => u.pct_negativo, p1, true], ["adv", "Advogados", u => u.advogados.qtd, int]];
+  ["neg", "% mandado negativo", u => u.pct_negativo, p1, true], ["loc", "% localizada", u => u.localizados ? u.localizados.pct : null, p1],
+  ["adv", "Advogados", u => u.advogados.qtd, int]];
 function regiaoTabela(g) {
   const col = COLS_REG.find(c => c[0] === ORD_REG.col);
   const U = [...g.ufs].sort((a, b) => { const x = col[2](a), y = col[2](b); const c = x < y ? -1 : x > y ? 1 : 0; return ORD_REG.desc ? -c : c; });
@@ -1239,7 +1405,38 @@ function renderProdAg(R) {
   grafico("g-prodag", {type: "bar", data: {labels: p.map(x => x[0]), datasets: [{data: p.map(x => x[1]), backgroundColor: css("--compA"), borderRadius: 4}]},
     options: {plugins: {legend: {display: false}}, scales: {x: {grid: {display: false}, ticks: {maxRotation: 60, minRotation: 45, autoSkip: false, font: {size: 10}}}}}});
 }
-function renderOper(R) { renderKpis(R); renderEscada(R); renderPrazos(R); renderAdvogados(R); renderMapa(R); renderRegiao(R); renderMov(R); renderProdAg(R); }
+/* ---------- veículo localizado ---------- */
+const COR_ESTADO = D.placas ? D.placas.cores : {};
+const ROT_ESTADO = D.placas ? D.placas.rotulos : {};
+const quandoBR = q => { const d = addDias(HOJE, Math.floor(q / 1440)), m = ((q % 1440) + 1440) % 1440;
+  return `${dBR(d)} ${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+const haTxt = min => min < 60 ? `há ${int(min)} min` : `há ${int(Math.floor(min / 60))} h`;
+const tagEstado = (e, n) => `<span class="tag"><i style="background:${COR_ESTADO[e]}"></i>${ROT_ESTADO[e]}${n !== undefined ? `: ${int(n)}` : ""}</span>`;
+function renderLoc(R) {
+  const L = R.localizado;
+  if (!mostrar("card-loc", !!L)) return;
+  $("loc-ate").textContent = L.ate ? `capturas até ${dBR(L.ate.slice(0, 10))} ${L.ate.slice(11, 16)}` : "";
+  $("loc-aviso").textContent = L.falhou ? `A leitura das capturas das ${S.agora} falhou; o card mostra a carga das ${L.falhou_de}.` : "";
+  mostrar("loc-aviso", !!L.falhou);
+  $("loc-est").innerHTML = "Padrões de circulação (60 dias): " + ["PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO"].map(e => tagEstado(e, L.estados[e])).join("") +
+    `<button class="chip" data-ir-aba="padroes">ver aba Padrões de placa</button>`;
+  for (const [k, v] of [["j24", L.j24], ["j7", L.j7], ["j30", L.j30]]) contar($("loc-" + k), v, int);
+  const w = v => (L.j30 ? v / L.j30 * 100 : 0) + "%";
+  $("rg30").style.width = L.j30 ? "100%" : "0"; $("rg7").style.width = w(L.j7); $("rg24").style.width = w(L.j24);
+  $("loc-leg").textContent = `Pastas com o veículo visto por câmera; cada faixa contém a anterior. ${int(L.total)} pastas já tiveram alguma captura; base: ${int(L.base)} processos no filtro, ${int(L.com_placa)} com placa.`;
+  trocarHTML($("loc-tiles"), `<div class="tile"><div class="tv">${int(L.fora_uf)}</div><div class="ts">fora da UF do processo (30 dias), ${p1(L.pct_fora)} dos localizados</div></div>` +
+    `<div class="tile"><div class="tv">${p1(L.pct_vistos30)}</div><div class="ts">dos processos com placa foram vistos em 30 dias</div></div>`);
+  const cel = v => `<td class="${v ? "nz" : "z"}">${int(v)}</td>`;
+  trocarHTML($("loc-etapa"), `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>Etapa</th><th>24 h</th><th>7 dias</th><th>30 dias</th><th style="text-align:left">O que fazer</th></tr></thead><tbody>` +
+    L.por_etapa.map(([e, a, b, c, sug]) => `<tr><td>${esc(e)}</td>${cel(a)}${cel(b)}${cel(c)}<td class="sug">${esc(sug)}</td></tr>`).join("") + `</tbody></table></div>`);
+  trocarHTML($("loc-rec"), L.recentes.length ? L.recentes.slice(0, 6).map(r => `<div class="rec"><div class="lin"><b>${esc(r.etapa)}</b><span title="${quandoBR(r.quando)}">${haTxt(r.min)}</span></div>
+    <div>${esc(r.local)}${r.fora ? `<span class="selo-uf">fora da UF</span>` : ""}</div><div class="muted">pasta ${esc(r.pasta)}</div></div>`).join("")
+    : VAZIO("Nenhuma captura nas últimas 24 horas no filtro atual."));
+  const maxC = Math.max(1, ...L.cidades.map(c => c[2]));
+  trocarHTML($("loc-cid"), L.cidades.length ? L.cidades.map(([c, u, n, pc]) => `<div class="pl"><span>${esc(c)}/${esc(u)}</span><span class="num">${int(n)} · ${p1(pc)}</span><span class="tr"><i style="width:${n / maxC * 100}%;background:var(--compB)"></i></span></div>`).join("")
+    : VAZIO("Nenhum veículo visto em 30 dias no filtro atual."));
+}
+function renderOper(R) { renderKpis(R); renderLoc(R); renderEscada(R); renderPrazos(R); renderAdvogados(R); renderMapa(R); renderRegiao(R); renderMov(R); renderProdAg(R); }
 
 /* ======================= Gestão ======================= */
 function renderDest(R) {
@@ -1357,6 +1554,8 @@ function iniciar() {
     if (r) { if (r.dataset.rm === "datas") { S.f.de = S.f.ate = null; } else S.f[r.dataset.rm] = S.f[r.dataset.rm].filter(v => v !== r.dataset.v); return render(); }
     const a = ev.target.closest(".advl"); if (a) { abrirExtra(true); return alternar("adv", a.dataset.adv); }
     const h = ev.target.closest("[data-h]"); if (h) { const el = $(h.dataset.h); el.classList.toggle("on"); h.classList.toggle("on", el.classList.contains("on")); return; }
+    const ia = ev.target.closest("[data-ir-aba]"); if (ia) return aplicarAba(ia.dataset.irAba);
+    const mp = ev.target.closest("[data-mapa]"); if (mp && !mp.disabled) { S.mapa = mp.dataset.mapa; return renderMapa(S.R); }
     const o = ev.target.closest("[data-ordreg]");
     if (o) { const c2 = o.dataset.ordreg; ORD_REG = ORD_REG.col === c2 ? {col: c2, desc: !ORD_REG.desc} : {col: c2, desc: c2 !== "uf"}; return renderRegiao(S.R); }
   });

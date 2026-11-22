@@ -75,3 +75,24 @@ def test_planilha_bd_sem_base_avisa(node, payload):
     pub = next(p for p in payload["publicacoes"] if p["agora"] == "17:05")
     out = node("planilhas", referencia.tudo(payload, "17:05", {}), [], None, {}, pub, payload["fotos"][pub["foto"]], payload["hoje"])
     assert "indisponível" in out["BD"][0][0]
+
+
+def test_csv_localizacao(node, payload):
+    R = referencia.tudo(payload, "17:05", {})
+    out = node("csvDoCard", "localizacao", R, payload["hoje"])
+    linhas = out["texto"].lstrip("﻿").rstrip("\r\n").split("\r\n")
+    assert linhas[0] == "Etapa;24 horas;7 dias;30 dias;Sugestão"
+    assert len(linhas) == 8 and linhas[1].startswith("MANDADO EXPEDIDO;")
+    L = R["localizado"]
+    assert linhas[-1] == f"Total (todas as etapas);{L['j24']};{L['j7']};{L['j30']};"
+    assert out["nome"] == f"localizacao_{payload['hoje']}.csv"
+
+
+def test_regioes_com_localizados(node, payload):
+    R = referencia.tudo(payload, "17:05", {"uf": ["SP"]})
+    pub = next(p for p in payload["publicacoes"] if p["agora"] == "17:05")
+    out = node("planilhas", R, [], None, {"uf": ["SP"]}, pub, payload["fotos"][pub["foto"]], payload["hoje"])
+    rot = [l[0] for l in out["Regioes"]]
+    i = rot.index("Veículos localizados 30 dias")
+    assert rot[i + 1] == "% da carteira localizada (30 dias)" and rot[i + 2] == "Advogados"
+    assert out["Regioes"][i][1:] == [R["regioes"]["ufs"][0]["localizados"]["d30"], R["regioes"]["brasil"]["localizados"]["d30"]]
