@@ -88,6 +88,7 @@ MARCAS = {
 CORES = np.array(["PRATA", "BRANCA", "PRETA", "CINZA", "VERMELHA", "AZUL"])
 TIPOS_AUX = np.array(["PROTOCOLAR PETICAO", "CONFERIR CUSTAS", "CONTATAR CLIENTE", "JUNTAR DOCUMENTO", "AUDIENCIA"])
 N_ADV = 24
+FATOR_PRAZO = {"ADV-07": 0.5, "ADV-15": 0.55}   # advogados que deixam prazo vencer mais (sinal "vencidos alto")
 
 
 @dataclass
@@ -159,7 +160,7 @@ def simular(seed: int = 42) -> Simulacao:
         nomes = [c[0] for c in COMARCAS[u]]
         peso = np.array([c[3] for c in COMARCAS[u]], dtype=float)
         comarca[m] = rng.choice(nomes, m.sum(), p=peso / peso.sum())
-    carga = rng.gamma(2.2, 1.0, N_ADV)
+    carga = rng.gamma(12.0, 1.0, N_ADV)       # carga desigual, mas só alguns acima de 1,25× a mediana
     adv = np.where(rng.random(n) < 0.03, None,
                    np.array([f"ADV-{i:02d}" for i in range(1, N_ADV + 1)], dtype=object)[rng.choice(N_ADV, n, p=carga / carga.sum())])
 
@@ -190,7 +191,7 @@ def simular(seed: int = 42) -> Simulacao:
             while c_ini < fim:
                 c_fim = min(fim, c_ini + pd.Timedelta(days=float(rng.uniform(25, 60))))
                 dur = (c_fim - c_ini) / pd.Timedelta(days=1)
-                prazo = c_ini + pd.Timedelta(days=max(dur, 1.0) * float(rng.uniform(0.2, 1.4)))
+                prazo = c_ini + pd.Timedelta(days=max(dur, 1.0) * float(rng.uniform(0.2, 1.4)) * FATOR_PRAZO.get(adv[i], 1.0))
                 prazo = prazo.normalize() + pd.Timedelta(minutes=int(rng.integers(8 * 60, 24 * 60)))
                 tipo_txt = tipo.lower() + " " if rng.random() < 0.01 else tipo
                 id_agenda += 1
