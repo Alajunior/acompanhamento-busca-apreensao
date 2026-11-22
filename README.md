@@ -33,7 +33,7 @@ Este painel responde às perguntas do jurídico:
 5. **Aba Padrões de placa (BETA):** o que se repetiu nas capturas dos últimos 60 dias, por pasta:
    - seis estados (padrão observado, em formação, aprendendo, sem captura recente, sem captura, sem placa);
    - lista com busca por pasta ou placa e o detalhe da pasta: ponto principal, ordem habitual pelo horário (A → B → C), área, dias da semana, horário e endereço do banco ("perto de casa");
-   - mapa de ruas (OpenStreetMap) com os pontos, a sequência e a área. Link direto: [`?aba=padroes&pasta=7008085`](https://alajunior.github.io/acompanhamento-busca-apreensao/?aba=padroes&pasta=7008085).
+   - mapa de ruas (OpenStreetMap) com os pontos, a sequência e a área. Link direto: [`?aba=padroes&pasta=7007528`](https://alajunior.github.io/acompanhamento-busca-apreensao/?aba=padroes&pasta=7007528).
 6. **Aba Busca e Apreensão:** o modo planilha, com as três tabelas dinâmicas da planilha original do jurídico (Produtivos, Follow e Em diligência).
 7. **Exportar Excel:** um `.xlsx` com os filtros ativos (BD com as 62 colunas, Resumo, Prazos, Advogados, Movimentação, Localizados, Padroes, Filtros e, com UF escolhida, Regiões). Cada card também tem seu **CSV**.
 
@@ -67,7 +67,7 @@ Os cards de análise têm um botão **ⓘ** com o "como ler". São três temas (
 
 No dia simulado são **4.617 processos**, 27% com agendamento vencido e 42 pastas com empate de tarefas no mesmo dia. Nos empates entre AGUARDANDO LIMINAR e EMENDAR INICIAL, a etapa real é EMENDAR em cerca de 87%, a proporção medida no histórico do sistema real: é por isso que a precedência do fluxo põe EMENDAR na frente. A conciliação com a tabela oficial fecha nas três recargas.
 
-Nas placas, às 17:05: 1.506 pastas tiveram o veículo visto em 30 dias (33% das que têm placa), 278 nas últimas 24 horas e 81 fora da UF do processo. Pelos padrões, 620 pastas estão em padrão observado, 322 em formação e 621 aprendendo.
+Nas placas, às 17:05: 1.527 pastas tiveram o veículo visto em 30 dias (34% das que têm placa), 262 nas últimas 24 horas e 78 fora da UF do processo. Pelos padrões, 638 pastas estão em padrão observado, 311 em formação e 632 aprendendo.
 
 ## Decisões
 
@@ -83,6 +83,7 @@ Nas placas, às 17:05: 1.506 pastas tiveram o veículo visto em 30 dias (33% das
 - **Os estados de falha são encenados.** No painel real, a guarda de volume e a queda para a tabela oficial só aparecem quando acontecem. Aqui eles ficam em horários fixos do "agora", para quem avalia ver as travas funcionando.
 - **Padrões calculados no Python, não no navegador.** Os padrões dependem de geometria (células, envoltória convexa, haversine) e mudam pouco ao longo do dia. O Python calcula cada carga uma vez, e só as pastas cujas capturas mudaram são recalculadas e gravadas. O navegador só conta por filtro, e essas contagens também estão na paridade.
 - **Detalhe sob demanda.** O resumo das placas vai no HTML, porque o card, o mapa e a lista precisam dele já na abertura. O detalhe de cada pasta fica no `placas.json` e só carrega quando a aba abre. Aberto como arquivo local, o painel avisa e o resto continua funcionando.
+- **Limite conhecido da simulação:** os pontos das rotinas são sorteados num raio de 6 km do centro da cidade, sem máscara de terra, e os bairros são nomes genéricos sorteados por ponto. Em cidades litorâneas, alguns pontos caem no mar. Para o que o projeto mostra (a regra dos padrões e a tela), isso não muda nada; para um estudo geográfico, seria o primeiro ajuste.
 - **Descreve, não prevê.** A aba Padrões diz onde o veículo costuma passar e em que horário, como no painel real. Não estima probabilidade de apreensão.
 - **Nenhum nome de pessoa.** Advogados são códigos (um nome inventado pode coincidir com o de uma pessoa real) e os destaques nunca citam advogado.
 
@@ -96,7 +97,7 @@ Nas placas, às 17:05: 1.506 pastas tiveram o veículo visto em 30 dias (33% das
 pip install -r requirements.txt
 python -m dados.gerar --verificar      # simulação + conferência do funil (~15 s)
 python -m src.montar_painel            # docs/index.html, docs/bd.json e docs/placas.json
-python -m pytest                       # 129 testes (a paridade e a exportação precisam do Node)
+python -m pytest                       # 130 testes (a paridade e a exportação precisam do Node)
 ```
 
 Abra `docs/index.html` no navegador. Para o detalhe da aba Padrões e para as abas BD, Localizados e Padroes do `.xlsx`, sirva a pasta (`python -m http.server --directory docs`), porque o navegador não carrega `bd.json` nem `placas.json` de um arquivo local.
@@ -115,7 +116,7 @@ src/agregar.js               agregações do painel (navegador e Node)
 src/referencia.py            as mesmas agregações em Python, para a paridade
 src/exportar.js              CSV por card e abas do .xlsx
 src/painel.html              o painel (HTML, CSS e JS puro)
-tests/                       129 testes: simulação, capturas, padrões, regra, travas, conciliação, payload, referência, paridade, exportação, guarda de publicação
+tests/                       130 testes: simulação, capturas, padrões, regra, travas, conciliação, payload, referência, paridade, exportação, guarda de publicação
 docs/                        o painel publicado, a base da exportação e as imagens deste README
 ```
 

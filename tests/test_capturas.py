@@ -80,3 +80,10 @@ def test_enderecos_por_cpf(sim, end):
     assert cpfs <= set(end["CPF"])
     res = end.groupby("CPF")["TIPO"].apply(lambda s: s.str.startswith("RESIDENC").any())
     assert 0.85 <= res.mean() <= 0.95
+
+
+def test_rotina_sem_madrugada(sim, cap):
+    # a 2ª passagem do dia é ida e volta de dia: nada entre 0h e 4h nos veículos da carteira (o ruído de ±40 min da rotina das 6h chega às 4h)
+    da_carteira = cap["PLATE"].str.upper().str.replace(r"[^A-Z0-9]", "", regex=True).isin(set(sim.garantia["PLACA"]))
+    h = pd.to_datetime(cap.loc[da_carteira, "CAPTURED"]).dt.hour
+    assert (h < 4).mean() < 0.001, (h < 4).mean()

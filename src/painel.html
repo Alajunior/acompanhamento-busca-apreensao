@@ -228,7 +228,7 @@ body[data-theme="light"] .faixaest button{background:#fff}
 body:not([data-theme="light"]) #pd-mapa .leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9)}
 body:not([data-theme="light"]) #pd-mapa{background:#1b1f27}
 .letra{width:22px;height:22px;border-radius:50%;background:#1b1f27;border:2px solid #E69F00;color:#fff;font:800 11px/18px Inter;text-align:center}
-.selo-casa{font:800 10px Inter;color:var(--pos);border:1px solid var(--pos);border-radius:999px;padding:0 6px;margin-left:6px}
+.selo-casa{white-space:nowrap;font:800 10px Inter;color:var(--pos);border:1px solid var(--pos);border-radius:999px;padding:0 6px;margin-left:6px}
 @media(max-width:1100px){.pdgrid{grid-template-columns:1fr}.pdgrid>div:last-child{position:static}.faixaest{grid-template-columns:repeat(3,1fr)}#pd-mapa{height:360px}}
 @media(max-width:560px){.faixaest{grid-template-columns:repeat(2,1fr)}.pdhist{grid-template-columns:1fr}}
 /* região */
@@ -989,11 +989,11 @@ function renderPlanilha(R) {
 /* ======================= Padrões de placa ======================= */
 const PD = {estados: new Set(A.ESTADOS_PADRAO), busca: "", pag: 0, sel: null, mapa: null, camada: null, tilesFalharam: false};
 const POR_PAG = 40;
-let PL;   // placas.json: undefined = ainda não carregado; null = indisponível
-async function carregarPlacas() {
-  if (PL !== undefined) return PL;
-  try { const r = await fetch("placas.json"); PL = r.ok ? await r.json() : null; } catch (e) { PL = null; }
-  return PL;
+let PL, PL_CARGA;   // placas.json: undefined = ainda não carregado; null = indisponível; PL_CARGA = a busca em andamento (uma só)
+function carregarPlacas() {
+  if (PL !== undefined) return Promise.resolve(PL);
+  PL_CARGA = PL_CARGA || fetch("placas.json").then(r => (r.ok ? r.json() : null)).catch(() => null).then(j => (PL = j));
+  return PL_CARGA;
 }
 function detalhes(k) {
   if (!PL) return null;
@@ -1015,7 +1015,7 @@ function renderPadroes(R) {
   if (!L) return;
   $("pd-ate").textContent = L.ate ? `capturas até ${dBR(L.ate.slice(0, 10))} ${L.ate.slice(11, 16)}` : "";
   $("pd-est").innerHTML = D.placas.estados.map(e => `<button style="--c:${COR_ESTADO[e]}" class="${PD.estados.has(e) ? "on" : ""}" data-pdest="${e}" aria-pressed="${PD.estados.has(e)}"><b>${int(L.estados[e])}</b><span>${ROT_ESTADO[e]}</span></button>`).join("");
-  const lista = A.listaPadroes(D, S.agora, S.f, [...PD.estados], PD.busca);
+  const lista = PD.lista = A.listaPadroes(D, S.agora, S.f, [...PD.estados], PD.busca);
   if (PD.sel !== null && !lista.some(x => x.i === PD.sel)) PD.sel = null;
   const nPag = Math.max(1, Math.ceil(lista.length / POR_PAG)); PD.pag = Math.min(PD.pag, nPag - 1);
   const pag = lista.slice(PD.pag * POR_PAG, (PD.pag + 1) * POR_PAG);
@@ -1023,7 +1023,8 @@ function renderPadroes(R) {
     : `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>Pasta</th><th style="text-align:left">Etapa</th><th style="text-align:left">Estado</th><th style="text-align:left">Ponto principal</th><th>Última passagem</th></tr></thead><tbody>` +
       pag.map(x => `<tr class="pdl${x.i === PD.sel ? " sel" : ""}" tabindex="0" data-pdsel="${x.i}"><td>${esc(x.pasta)}</td><td class="esq">${esc(x.etapa)}</td><td class="esq">${tagEstado(x.estado)}${x.dias ? ` <small class="muted" style="white-space:nowrap">${x.dias} ${x.dias === 1 ? "dia" : "dias"}</small>` : ""}</td><td class="esq">${esc(x.principal || "—")}</td><td>${x.ult !== null ? quandoBR(x.ult) : "—"}</td></tr>`).join("") + `</tbody></table></div>`);
   $("pd-pag").innerHTML = lista.length ? `<button class="chip" data-pdpag="-1" ${PD.pag ? "" : "disabled"} aria-label="página anterior">‹</button> ${PD.pag + 1} de ${nPag} · ${int(lista.length)} contratos <button class="chip" data-pdpag="1" ${PD.pag < nPag - 1 ? "" : "disabled"} aria-label="próxima página">›</button>` : "";
-  carregarPlacas().then(() => { if (S.aba === "padroes") { renderDetalhe(lista); desenharMapa(lista); } });
+  // o callback lê a lista do momento em que o arquivo chega, não a deste render (cliques durante a carga)
+  carregarPlacas().then(() => { if (S.aba === "padroes") { renderDetalhe(PD.lista); desenharMapa(PD.lista); } });
 }
 function renderDetalhe(lista) {
   const el = $("pd-det"), k = A.cargaK(D, S.agora), det = detalhes(k);
