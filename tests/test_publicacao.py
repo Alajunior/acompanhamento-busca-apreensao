@@ -43,11 +43,6 @@ def test_anterior_e_ultima_foto_de_dia_menor():
     assert anterior(fotos[:1], date(2026, 11, 24)) is None
 
 
-@pytest.fixture(scope="module")
-def linha():
-    return linha_do_tempo(simular(42))
-
-
 def test_roteiro_de_hoje(linha):
     p = {x["agora"]: x for x in linha.publicacoes}
     assert list(p) == ["07:05", "09:05", "11:05", "13:05", "15:05", "17:05"]

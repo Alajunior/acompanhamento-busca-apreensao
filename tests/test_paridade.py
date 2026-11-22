@@ -23,11 +23,6 @@ CASOS_FIXOS = [("17:05", {}), ("07:05", {}), ("11:05", {}), ("13:05", {}), ("17:
                ("09:05", {"de": "2026-11-20", "ate": "2026-12-03", "etapa": ["AGUARDANDO LIMINAR", "MANDADO EXPEDIDO"]})]
 
 
-@pytest.fixture(scope="module")
-def payload():
-    return montar_payload(linha_do_tempo(simular(42)))
-
-
 def casos_sorteados(pl: dict, n: int = 40, seed: int = 1) -> list:
     rng = random.Random(seed)
     agoras = [p["agora"] for p in pl["publicacoes"]]

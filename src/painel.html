@@ -1,19 +1,881 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Acompanhamento de Busca e Apreensão</title>
+<meta name="description" content="Painel jurídico de processos de busca e apreensão de veículos (dados sintéticos): etapas, prazos, carteira por advogado, mapa por UF, gestão de risco e as tabelas da planilha original.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@600;700&display=swap">
+<script src="vendor/chart.umd.min.js"></script>
+<script src="vendor/xlsx.full.min.js" defer></script>
+<style>
+/* =================== temas (tokens) — mesma família visual dos outros painéis do portfólio =================== */
+body{
+  --bg:radial-gradient(1200px 640px at 82% -12%,#2b2620 0%,#171410 55%,#0d0b08 92%);
+  --text:#ece6da;--strong:#fff;--t2:#b8ae9c;--t3:#c9bfa8;--t4:#b3a68c;
+  --ac:#D4A72C;--ac2:#B98A3D;--acs:#f0dca0;--acg:linear-gradient(135deg,#D4A72C,#B98A3D);--ac-rgb:212,167,44;
+  --ac-anim:#D4A72C;--ac-anim-glow:rgba(212,167,44,.5);
+  --bd:rgba(212,167,44,.2);--bd-h:rgba(212,167,44,.25);--bd-i:rgba(212,167,44,.3);
+  --glass:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+  --kpi:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+  --inp:#1c1712;--sticky:#181410;--thead:#1e1810;--tot1:#241e14;--stripe:rgba(255,255,255,.03);--hover:rgba(212,167,44,.10);
+  --pos:#5be59a;--neg:#ff6b81;--flat:#b8ae9c;--warn:#ff9f43;
+  --chart-c:#f0dca0;--chart-b:rgba(212,167,44,.14);--grid0:rgba(255,255,255,.07);
+  --p-dot:rgba(212,167,44,.9);--p-line:212,167,44;--p-mouse:185,138,61;
+  --compA:#5ec8ff;--compB:#f2b33d;--scheme:dark;
+}
+body[data-theme="midnight"]{
+  --bg:radial-gradient(1200px 640px at 82% -12%,#0f2647 0%,#081729 55%,#040b16 92%);
+  --text:#dbe7fb;--t2:#9fb8d9;--t3:#bcd0ec;--t4:#9fb8d9;
+  --ac:#ff7a59;--ac2:#3b5b8c;--acs:#ffd2c2;--acg:linear-gradient(135deg,#ff9473,#ff7a59);--ac-rgb:255,122,89;
+  --ac-anim:#ff9d80;--ac-anim-glow:rgba(255,122,89,.5);
+  --bd:rgba(59,91,140,.42);--bd-h:rgba(59,91,140,.6);--bd-i:rgba(59,91,140,.55);
+  --inp:#081729;--sticky:#050d1a;--thead:#0a1830;--tot1:#0f2040;--hover:rgba(59,91,140,.22);
+  --chart-c:#9fb8d9;--chart-b:rgba(59,91,140,.25);--grid0:rgba(159,184,217,.08);
+  --p-dot:rgba(255,122,89,.85);--p-line:59,91,140;--p-mouse:255,122,89;
+}
+body[data-theme="light"]{
+  --bg:linear-gradient(180deg,#EDE6D8 0%,#F6F2E8 100%);
+  --text:#23262b;--strong:#2e2a1e;--t2:#475569;--t3:#475569;--t4:#475569;
+  --ac:#8a6a1f;--ac2:#B98A3D;--acs:#6b5518;--acg:linear-gradient(135deg,#8a6a1f,#B98A3D);--ac-rgb:138,106,31;
+  --ac-anim:#8a6a1f;--ac-anim-glow:rgba(138,106,31,.35);
+  --bd:#dbe4ee;--bd-h:#d6cfbf;--bd-i:#cbd5e1;
+  --glass:#fff;--kpi:linear-gradient(180deg,#fff,#f8fbff);--inp:#fff;
+  --sticky:#fff;--thead:#2e2a1e;--tot1:#eef1f6;--stripe:#f8fafc;--hover:#F3ECD9;
+  --pos:#166534;--neg:#b91c1c;--flat:#94a3b8;--warn:#9a4b00;
+  --chart-c:#334155;--chart-b:rgba(15,23,42,.08);--grid0:#e2e8f0;
+  --p-dot:rgba(139,106,31,.55);--p-line:139,106,31;--p-mouse:185,138,61;
+  --compA:#0b78c2;--compB:#b06d00;--scheme:light;
+}
+*{box-sizing:border-box}
+html{color-scheme:var(--scheme)}
+body{margin:0;padding:22px;min-height:100vh;background:var(--bg);background-attachment:fixed;color:var(--text);font:14px/1.45 Inter,'Segoe UI',Arial,sans-serif}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.wrap{max-width:1560px;margin:0 auto;position:relative;z-index:1}
+b,strong{font-weight:700}
+.muted{color:var(--t2);font-size:12.5px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--bd-h)}
+h1{font:800 clamp(18px,2.2vw,28px)/1.15 Sora,Inter,sans-serif;margin:0;color:var(--strong)}
+h1 span{color:var(--ac)}
+.sub{font-size:13px;color:var(--t2);margin-top:3px}
+.sp{flex:1}
+.selo{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+.badge{font:700 11.5px Inter;color:var(--t3);border:1px solid var(--bd-i);background:rgba(255,255,255,.04);border-radius:30px;padding:6px 12px;white-space:nowrap}
+.badge.ao_vivo{border-color:var(--pos)} .badge.oficial{border-color:var(--compB)}
+.conc{font:600 11px Inter;color:var(--t2);max-width:340px;text-align:right}
+body[data-theme="light"] .badge{background:#fff}
+.pill{border-radius:10px;padding:7px 13px;background:linear-gradient(135deg,#241e14,#6b5518);box-shadow:0 0 22px rgba(185,138,61,.45);font:800 10px Inter;letter-spacing:.08em;text-transform:uppercase;color:#f0dca0;text-align:center;line-height:1.35}
+body[data-theme="midnight"] .pill{background:linear-gradient(135deg,#0a1830,#3b5b8c);box-shadow:0 0 22px rgba(59,91,140,.55);color:#dbe7fb}
+body[data-theme="light"] .pill{background:linear-gradient(135deg,#2e2a1e,#6b5518);box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.seg{display:inline-flex;align-items:center;background:rgba(255,255,255,.05);border:1px solid var(--bd-i);border-radius:30px;padding:4px;gap:3px;flex-wrap:wrap}
+body[data-theme="light"] .seg{background:#fff}
+.seg>b{font-size:11px;color:var(--t2);padding:6px 10px}
+.seg button{border:0;background:transparent;color:var(--t3);font:700 12px Inter;padding:7px 13px;border-radius:24px;cursor:pointer;transition:.2s}
+.seg button.on{background:var(--acg);color:#04121f}
+body[data-theme="light"] .seg button.on{color:#fff}
+.btnp{font:800 12px Inter;padding:9px 16px;border-radius:30px;border:0;background:var(--acg);color:#04121f;cursor:pointer;box-shadow:0 8px 20px rgba(var(--ac-rgb),.3)}
+body[data-theme="light"] .btnp{color:#fff}
+.note{font-size:12.5px;color:var(--t3);background:rgba(255,159,67,.10);border:1px solid rgba(255,159,67,.45);border-left:4px solid var(--warn);border-radius:10px;padding:8px 12px;margin:0 0 14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.tabs button{border:1px solid var(--bd-i);background:rgba(255,255,255,.04);color:var(--t3);font:700 13px Inter;padding:10px 20px;border-radius:30px;cursor:pointer;transition:.2s}
+.tabs button.on{background:var(--acg);border-color:transparent;color:#fff;box-shadow:0 8px 20px rgba(var(--ac-rgb),.35)}
+body[data-theme="midnight"] .tabs button.on{color:#04121f}
+body[data-theme="light"] .tabs button{background:#fff;color:#475569}
+body[data-theme="light"] .tabs button.on{color:#fff;background:var(--acg)}
+.glass{background:var(--glass);border:1px solid var(--bd);border-radius:16px;padding:18px;margin-bottom:16px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 12px 30px rgba(0,0,0,.32);min-width:0}
+body[data-theme="light"] .glass{box-shadow:0 2px 10px rgba(15,23,42,.06)}
+.ctitle{font:700 15px Sora,Inter,sans-serif;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;margin-bottom:6px;color:var(--strong)}
+.desc{font-size:12.5px;color:var(--t2);margin:0 0 12px}
+.hbtn{border:1px solid var(--bd-i);background:rgba(255,255,255,.04);color:var(--t2);border-radius:8px;padding:3px 10px;font:700 11.5px Inter;cursor:pointer}
+.hbtn:first-of-type{margin-left:auto}
+body[data-theme="light"] .hbtn{background:#fff}
+.hbtn.on{color:var(--ac);border-color:rgba(var(--ac-rgb),.6)}
+.help{display:none;font-size:12.5px;line-height:1.55;color:var(--t4);background:rgba(var(--ac-rgb),.07);border-left:3px solid rgba(var(--ac-rgb),.55);border-radius:0 8px 8px 0;padding:9px 13px;margin:0 0 12px;max-width:120ch}
+.help.on{display:block}
+body[data-theme="light"] .help{background:#f1f5f9;border-left-color:#8a6a1f}
+.vazio{padding:14px;border:1px dashed var(--bd-i);border-radius:10px;color:var(--t2);font-size:13px;text-align:center}
+.fade{animation:fade .3s ease}
+@keyframes fade{from{opacity:.25;transform:translateY(3px)}to{opacity:1;transform:none}}
+.entra{animation:entra .26s ease}
+@keyframes entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.surge{animation:surge .42s ease}
+@keyframes surge{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* filtros */
+.cmdbar{padding:12px 16px}
+.frow{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.frow+.frow{margin-top:10px;padding-top:10px;border-top:1px dashed var(--bd)}
+.fg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
+.lb{font:800 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-right:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;font:700 12px Inter;padding:5px 11px;border-radius:30px;border:1px solid var(--bd-i);background:rgba(255,255,255,.04);color:var(--t3);cursor:pointer;transition:.2s;white-space:nowrap}
+body[data-theme="light"] .chip{background:#fff}
+.chip.on{background:var(--acg);border-color:transparent;color:#fff}
+body[data-theme="midnight"] .chip.on{color:#04121f}
+.chip.atalho{border-style:dashed}
+input[type=date]{font:13px Inter;color:var(--text);background:var(--inp);border:1px solid var(--bd-i);border-radius:9px;padding:5px 8px}
+#ativos{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;font-size:12px;color:var(--t2)}
+#ativos .chip{padding:3px 9px;font-size:11.5px}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--kpi);border:1px solid var(--bd);border-left:4px solid var(--flat);border-radius:14px;padding:13px 14px;min-width:0}
+.kpi.down{border-left-color:var(--neg)}
+.kpi .l{font:700 10.5px Inter;letter-spacing:.05em;text-transform:uppercase;color:var(--t2)}
+.kpi .v{font:800 22px Sora,Inter;margin-top:4px;color:var(--strong);font-variant-numeric:tabular-nums;white-space:nowrap}
+.kpi .v.animating{color:var(--ac-anim);text-shadow:0 0 12px var(--ac-anim-glow)}
+.kpi .dl{font:700 10.5px/1.35 'JetBrains Mono',monospace;margin-top:3px;color:var(--flat)}
+.up-t{color:var(--pos)!important} .down-t{color:var(--neg)!important}
+/* tabelas */
+.tblwrap{overflow:auto;max-height:520px;border-radius:10px;border:1px solid var(--bd)}
+table.t{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+.t th,.t td{padding:7px 9px;text-align:right;white-space:nowrap}
+.t th{position:sticky;top:0;z-index:2;background:var(--thead);font:700 10.5px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
+body[data-theme="light"] .t th{color:#fff}
+.t th:first-child,.t td:first-child{text-align:left}
+.t tbody tr:nth-child(even) td{background-image:linear-gradient(var(--stripe),var(--stripe))}
+.t tr.tot td{font-weight:800;border-top:2px solid rgba(var(--ac-rgb),.4)}
+.t th.ord{cursor:pointer}
+td.ruim{color:var(--neg);font-weight:800}
+.chart{position:relative;width:100%;height:300px}
+.chart.h340{height:340px}.chart.h260{height:260px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.g13{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start}
+.g16{display:grid;grid-template-columns:1fr 1.6fr;gap:16px;align-items:start}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+.g2>*,.g13>*,.g16>*,.g3>*{min-width:0}
+.oculto{display:none!important}
+footer{margin-top:24px;padding-top:14px;border-top:1px solid rgba(var(--ac-rgb),.18);text-align:center;font:600 12px 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+/* advogados */
+.advctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.advlista{max-height:420px;overflow:auto;border:1px solid var(--bd);border-radius:10px}
+.advcab,.advl{display:grid;grid-template-columns:minmax(120px,1.1fr) 2fr 64px 86px 52px 86px;gap:8px;align-items:center;padding:7px 10px}
+.advcab{position:sticky;top:0;background:var(--thead);font:700 10.5px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);z-index:2}
+body[data-theme="light"] .advcab{color:#fff}
+.advl{border-top:1px solid var(--bd);cursor:pointer;font-variant-numeric:tabular-nums;font-size:13px}
+.advl:hover{background:var(--hover)} .advl.sel{background:rgba(var(--ac-rgb),.16)}
+.advl:focus-visible{outline:2px solid var(--ac);outline-offset:-2px}
+.advl .n{font-weight:700;min-width:0;line-height:1.3}
+.advl .n .sinal{margin:2px 4px 0 0}
+.advl .r{text-align:right}
+.sinal{display:inline-block;font:800 10px Inter;padding:1px 7px;border-radius:999px;margin-left:5px;white-space:nowrap}
+.sinal.carga{color:var(--compB);border:1px solid var(--compB)} .sinal.venc{color:var(--neg);border:1px solid var(--neg)}
+.trilho{position:relative;height:16px}
+.barra{display:flex;height:10px;border-radius:3px;overflow:hidden;transition:width .55s cubic-bezier(.2,.7,.2,1)}
+.barra i{display:block;height:100%}
+.traco{position:absolute;left:0;top:12px;height:3px;background:var(--neg);border-radius:2px;transition:width .55s cubic-bezier(.2,.7,.2,1)}
+.med{position:absolute;top:-2px;bottom:-2px;border-left:2px dashed var(--t2)}
+.legenda{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--t2);margin-top:8px}
+.legenda i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.regra{font-size:12px;color:var(--t2);margin-top:8px;line-height:1.5}
+/* mapa */
+.mapa{position:relative}
+.mapa svg{width:100%;height:auto;max-height:440px;display:block}
+.mapa path{stroke:var(--sticky);stroke-width:.6;cursor:pointer;transition:fill .5s,opacity .3s}
+.mapa path:focus{outline:none}
+.mapa .dica{position:absolute;pointer-events:none;background:var(--thead);color:#fff;font-size:12px;padding:6px 9px;border-radius:8px;opacity:0;transition:opacity .12s;white-space:nowrap;z-index:3}
+.mapa .brasil{position:absolute;right:6px;top:6px;opacity:0;transform:translateY(-4px);transition:.25s;pointer-events:none}
+.mapa .brasil.on{opacity:1;transform:none;pointer-events:auto}
+/* região */
+.reg-cab{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin-bottom:12px}
+.reg-cab .uf{font:800 30px Sora;color:var(--strong)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:rgba(255,255,255,.045);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;min-width:0}
+body[data-theme="light"] .tile{background:#fff}
+.tile .tl{font:800 10.5px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
+.tile .tv{font:800 20px Sora;color:var(--strong);margin:2px 0}
+.tile .ts{font-size:12px;color:var(--t2)}
+.bul{display:grid;grid-template-columns:150px 1fr 150px;gap:8px;align-items:center;font-size:12.5px;margin:4px 0}
+.bul .tr{position:relative;height:10px;background:var(--grid0);border-radius:3px}
+.bul .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--compA);transition:width .55s}
+.bul .tr em{position:absolute;top:-3px;bottom:-3px;border-left:2px solid var(--strong)}
+.mini{display:block;height:5px;border-radius:3px;background:var(--compA);margin-top:3px;margin-left:auto;transition:width .55s}
+.mx{font-weight:800} .mx.ruim{color:var(--neg)}
+.ponto{font-size:9px;margin-right:3px}
+.t td.br,.t th.br{color:var(--t2);border-left:1px dashed var(--bd-i)}
+.t tr.grp td{font-weight:800;color:var(--strong);text-align:left;background:rgba(var(--ac-rgb),.06)}
+/* perfil */
+.blocos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.bloco .lead{font:800 22px Sora;color:var(--strong)} .bloco .lead small{font:600 12px Inter;color:var(--t2);display:block}
+.pl{display:grid;grid-template-columns:minmax(80px,1fr) 92px;gap:2px 8px;align-items:center;font-size:12.5px;margin-top:6px}
+.pl .tr{grid-column:1/3;height:7px;background:var(--grid0);border-radius:3px}
+.pl .tr i{display:block;height:100%;border-radius:3px;background:var(--compA);transition:width .55s cubic-bezier(.2,.7,.2,1)}
+.pl .num{text-align:right;font-variant-numeric:tabular-nums;color:var(--t3)}
+.pl .mudo{color:var(--t2)}
+/* destaques */
+.dest{border-left:3px solid var(--ac);padding:8px 12px;margin-bottom:10px;background:rgba(var(--ac-rgb),.05);border-radius:0 10px 10px 0}
+.dest b{display:block;color:var(--strong);margin-bottom:3px} .dest span{color:var(--t2);font-size:12.5px}
+.mtiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.faixas{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--t2);margin-top:8px}
+@media(max-width:1100px){.g2,.g13,.g16,.g3{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}.blocos{grid-template-columns:1fr}}
+@media(max-width:700px){body{padding:12px}.mtiles{grid-template-columns:1fr 1fr}.advcab,.advl{grid-template-columns:minmax(90px,1fr) 1.3fr 48px 64px}.advcab>:nth-child(n+5),.advl>:nth-child(n+5){display:none}.bul{grid-template-columns:110px 1fr}.bul>:nth-child(3){grid-column:1/3;color:var(--t2)}.selo{align-items:flex-start}.conc{text-align:left}}
+@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi .v{font-size:18px}.tabs button{padding:9px 14px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
 </head>
-<body>
+<body data-theme="midnight">
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Acompanhamento de <span>Busca e Apreensão</span></h1>
+    <div class="sub">Mandados e liminares · réplica de um painel jurídico em produção, com dados sintéticos</div>
+  </div>
+  <div class="sp"></div>
+  <div class="selo"><span class="badge" id="selo">carregando…</span><span class="conc" id="conc"></span></div>
+  <div class="seg" id="segAgora" role="group" aria-label="Agora (simulado)"><b>Agora (simulado)</b>
+    <button data-agora="07:05">07:05</button><button data-agora="09:05">09:05</button><button data-agora="11:05">11:05</button><button data-agora="13:05">13:05</button><button data-agora="15:05">15:05</button><button data-agora="17:05">17:05</button></div>
+  <button class="btnp" id="exportar">Exportar Excel</button>
+  <div class="pill">Projeto de portfólio<br>dados sintéticos</div>
+  <div class="seg" id="segTema" role="group" aria-label="Tema"><b>Versão</b>
+    <button data-tema="midnight">Midnight</button><button data-tema="dark">Dark</button><button data-tema="light">Light</button></div>
+</header>
+<div class="note oculto" id="aviso" role="status"></div>
+
+<div class="glass cmdbar">
+  <div class="frow">
+    <div class="fg"><span class="lb">UF</span><span class="fg" id="fUF"></span></div>
+    <div class="fg"><span class="lb">Carteira produto</span><span class="fg" id="fCarteira"></span></div>
+    <div class="fg"><span class="lb">Data do agendamento</span>
+      <input type="date" id="fDe" aria-label="de"><span class="muted">até</span><input type="date" id="fAte" aria-label="até">
+      <button class="chip atalho" data-atalho="vencidos">Vencidos</button><button class="chip atalho" data-atalho="hoje">Hoje</button>
+      <button class="chip atalho" data-atalho="prox7">Próximos 7 dias</button><button class="chip atalho" data-atalho="mes">Mês</button></div>
+    <div class="fg"><button class="chip" id="maisFiltros" aria-expanded="false">+ Filtros</button><button class="chip" id="limpar">Limpar</button></div>
+  </div>
+  <div class="frow oculto" id="extra">
+    <div class="fg"><span class="lb">Advogado operacional</span><span class="fg" id="fAdv"></span></div>
+    <div class="fg"><span class="lb">Etapa</span><span class="fg" id="fEtapa"></span></div>
+    <div class="fg"><span class="lb">Produto do veículo</span><span class="fg" id="fProduto"></span></div>
+  </div>
+  <div id="ativos" class="oculto"></div>
+</div>
+
+<div class="tabs" role="tablist">
+  <button data-aba="oper" role="tab">Operação</button>
+  <button data-aba="gest" role="tab">Gestão</button>
+  <button data-aba="planilha" role="tab">Busca e Apreensão</button>
+</div>
+
+<!-- =================== Operação =================== -->
+<section id="v-oper">
+  <div class="kpis" id="kpis"></div>
+  <div class="g2">
+    <div class="glass" data-card="escada"><div class="ctitle">Escada de mandados<button class="hbtn" data-h="h-escada">ⓘ</button><button class="hbtn" data-csv="escada">CSV</button></div>
+      <p class="desc">Tentativa × situação do mandado. "Chegou" = % dos processos em mandado que alcançaram a tentativa. 1º mandado requerido não aparece porque não faz parte dos tipos da regra oficial.</p>
+      <div class="help" id="h-escada"><b>Como ler:</b> cada linha é uma tentativa de mandado; a cor da célula fica mais forte quanto mais processos ela tem. "Chegou" começa em 100% e desconta, linha a linha, quem parou na tentativa anterior: se o 3º mandado mostra 25%, um em cada quatro processos em mandado já está na 3ª tentativa ou além.</div>
+      <div id="c-escada"></div></div>
+    <div class="glass" data-card="prazos"><div class="ctitle">Prazos por etapa<button class="hbtn" data-h="h-prazos">ⓘ</button><button class="hbtn" data-csv="prazos">CSV</button></div>
+      <p class="desc">Data do agendamento em relação a hoje.</p>
+      <div class="help" id="h-prazos"><b>Como ler:</b> cada barra é uma etapa, dividida pelo prazo da tarefa: vencidos (data já passou), hoje, próximos 7 dias, depois e sem data. Vermelho grande numa etapa = fila parada ali.</div>
+      <div class="chart" id="b-prazos"><canvas id="g-prazos"></canvas></div><div id="v-prazos"></div></div>
+  </div>
+  <div class="g13">
+    <div class="glass" data-card="advogados"><div class="ctitle">Carteira por advogado<button class="hbtn" data-h="h-adv">ⓘ</button><button class="hbtn" data-csv="advogados">CSV</button></div>
+      <p class="desc">Barra = processos por etapa; traço fino abaixo = vencidos (data de agendamento já passou). Clique no advogado para filtrar.</p>
+      <div class="help" id="h-adv"><b>Como ler:</b> a barra de cada advogado tem a largura da carteira dele e as cores das etapas; o traço vermelho embaixo é o volume de vencidos, na mesma escala. O traço vertical tracejado é a mediana de processos. Os sinais só comparam advogados com 30 ou mais processos no filtro: <b>carga alta</b> = 1,25× a mediana ou mais; <b>vencidos alto</b> = % de vencidos 10 pontos acima da carteira filtrada. Na vista de dispersão, o canto de cima à direita é quem tem muito processo e muito vencido.</div>
+      <div class="advctl"><span class="lb">Ordenar por</span><div class="seg" id="segOrdAdv"><button data-ord="processos" class="on">Processos</button><button data-ord="vencidos">Vencidos</button><button data-ord="pct_venc">% vencidos</button><button data-ord="risco">Risco</button><button data-ord="hoje">Hoje</button></div>
+        <span class="sp"></span><div class="seg" id="segVistaAdv"><button data-vista="barras" class="on">Barras</button><button data-vista="disp">Processos × % vencidos</button></div></div>
+      <div id="c-adv"></div><div class="chart h340 oculto" id="b-disp"><canvas id="g-disp"></canvas></div>
+      <div class="legenda" id="leg-adv"></div><div class="regra" id="regra-adv"></div></div>
+    <div class="glass" data-card="uf"><div class="ctitle" id="t-mapa">Agendamentos por UF<button class="hbtn" data-h="h-mapa">ⓘ</button><button class="hbtn" data-csv="uf">CSV</button></div>
+      <p class="desc">Clique nos estados para filtrar (vários de uma vez). O mapa ignora o filtro de UF, para permitir somar estados.</p>
+      <div class="help" id="h-mapa"><b>Como ler:</b> quanto mais forte a cor, mais processos na UF. Clique em um ou mais estados para filtrar o painel inteiro; o mapa aproxima as UFs escolhidas, e "Brasil inteiro" desfaz.</div>
+      <div class="mapa" id="mapa"><button class="chip brasil" id="brasil">Brasil inteiro</button><div class="dica" id="dica"></div></div>
+      <div class="legenda" id="leg-mapa"></div></div>
+  </div>
+  <div class="glass oculto" data-card="regioes" id="card-regiao"><div class="ctitle">Detalhe da região <span class="fg" id="reg-chips"></span><button class="hbtn" data-h="h-reg">ⓘ</button><button class="hbtn" data-csv="regioes">CSV</button></div>
+    <p class="desc" id="reg-desc"></p>
+    <div class="help" id="h-reg"><b>Como ler:</b> cada UF é calculada com os demais filtros ativos e comparada ao Brasil (todas as UFs, mesmos filtros). Diferenças em pontos percentuais (p.p.); vermelho quando a UF está pior em vencidos, vencem hoje ou mandado negativo.</div>
+    <div id="c-regiao"></div></div>
+  <div class="glass" data-card="movimentacao"><div class="ctitle">Movimentação do dia<button class="hbtn" data-h="h-mov">ⓘ</button><button class="hbtn" data-csv="movimentacao">CSV</button></div>
+    <p class="desc" id="mov-desc"></p>
+    <div class="help" id="h-mov"><b>Como ler:</b> compara a publicação atual com a primeira foto do dia, com os mesmos filtros. Entradas e saídas são pastas que apareceram ou sumiram; mudança de agendamento é a troca do tipo da tarefa; mudança de etapa é a troca de fase (por exemplo, de AGUARDANDO LIMINAR para LIMINAR DEFERIDA).</div>
+    <div id="c-mov"></div></div>
+  <div class="glass" data-card="prodag"><div class="ctitle">Produtivos por agendamento<button class="hbtn" data-h="h-prodag">ⓘ</button></div>
+    <div class="help" id="h-prodag"><b>Como ler:</b> a mesma tabela "Produtivos" da aba Busca e Apreensão, em barras: quantos processos estão em cada tipo de tarefa.</div>
+    <div class="chart h260"><canvas id="g-prodag"></canvas></div><div id="v-prodag"></div></div>
+</section>
+
+<!-- =================== Gestão =================== -->
+<section id="v-gest" class="oculto">
+  <div class="glass" data-card="destaques"><div class="ctitle">Destaques<button class="hbtn" data-h="h-dest">ⓘ</button></div>
+    <p class="desc">Gerados automaticamente a partir dos filtros: achado e impacto.</p>
+    <div class="help" id="h-dest"><b>Como ler:</b> frases montadas por regras fixas a partir dos números do filtro (liminares paradas, vencidos, tentativas de mandado, UF com muito mandado negativo). Sem dado suficiente, a frase não aparece. Nenhuma frase cita advogado pelo nome.</div>
+    <div id="c-dest"></div></div>
+  <div class="g2">
+    <div class="glass" data-card="risco_etapa"><div class="ctitle">Risco e valor do bem por etapa<button class="hbtn" data-h="h-re">ⓘ</button><button class="hbtn" data-csv="risco_etapa">CSV</button></div>
+      <p class="desc" id="re-desc"></p>
+      <div class="help" id="h-re"><b>Como ler:</b> risco é o saldo devedor em jogo; valor do bem é quanto vale o veículo. Cobertura = bem ÷ dívida: abaixo de 100% a apreensão não cobre a dívida inteira.</div>
+      <div class="chart"><canvas id="g-re"></canvas></div><div id="v-re"></div></div>
+    <div class="glass" data-card="risco_uf"><div class="ctitle">Risco por UF<button class="hbtn" data-h="h-ru">ⓘ</button><button class="hbtn" data-csv="risco_uf">CSV</button></div>
+      <div class="help" id="h-ru"><b>Como ler:</b> UFs ordenadas pelo risco total. A legenda embaixo conta os processos por faixa de cobertura (bem ÷ risco).</div>
+      <div id="c-ru"></div></div>
+  </div>
+  <div class="glass" data-card="carteira_etapa"><div class="ctitle">Carteira × etapa <div class="seg" id="segCE"><button data-ce="qtd" class="on">Quantidade</button><button data-ce="risco">R$ risco</button></div><button class="hbtn" data-h="h-ce">ⓘ</button><button class="hbtn" data-csv="carteira_etapa">CSV</button></div>
+    <div class="help" id="h-ce"><b>Como ler:</b> cada linha é um segmento da carteira e cada coluna uma etapa; a cor mais forte marca onde se concentra o volume (ou o risco).</div>
+    <div id="c-ce"></div></div>
+  <div class="g16">
+    <div class="glass" data-card="comarcas"><div class="ctitle">Comarcas<button class="hbtn" data-h="h-com">ⓘ</button><button class="hbtn" data-csv="comarcas">CSV</button></div>
+      <p class="desc">Top 15 por quantidade; % em mandado negativo.</p>
+      <div class="help" id="h-com"><b>Como ler:</b> as comarcas com mais processos e a parcela deles em mandado negativo; acima de 50% (vermelho) a diligência está falhando muito ali.</div>
+      <div id="c-com"></div></div>
+    <div class="glass" data-card="perfil"><div class="ctitle">Perfil do veículo<button class="hbtn" data-h="h-perf">ⓘ</button><button class="hbtn" data-csv="perfil">CSV</button></div>
+      <p class="desc" id="perf-desc"></p>
+      <div class="help" id="h-perf"><b>Como ler:</b> três recortes do veículo (produto, idade e marca), com quantidade e % sobre os processos do filtro. O número grande é o item mais frequente de cada bloco.</div>
+      <div id="c-perf"></div></div>
+  </div>
+  <div class="glass" data-card="evolucao"><div class="ctitle">Evolução diária por etapa<button class="hbtn" data-h="h-evo">ⓘ</button><button class="hbtn" data-csv="evolucao">CSV</button></div>
+    <p class="desc" id="evo-desc"></p>
+    <div class="help" id="h-evo"><b>Como ler:</b> quantos processos havia em cada etapa no fim de cada dia (a última foto do dia). Domingo não tem foto e fica em branco, sem ligar os pontos. Os primeiros dias foram reconstruídos a partir do histórico (linha tracejada).</div>
+    <div class="chart h340"><canvas id="g-evo"></canvas></div></div>
+</section>
+
+<!-- =================== Busca e Apreensão (modo planilha) =================== -->
+<section id="v-planilha" class="oculto">
+  <p class="desc">Modo planilha: réplica das tabelas dinâmicas da planilha original do jurídico, calculadas com os filtros ativos.</p>
+  <div class="g3">
+    <div class="glass" data-card="produtivos"><div class="ctitle">Produtivos<button class="hbtn" data-csv="produtivos">CSV</button></div><div id="c-produtivos"></div></div>
+    <div class="glass" data-card="follow"><div class="ctitle">Follow<button class="hbtn" data-csv="follow">CSV</button></div><div id="c-follow"></div></div>
+    <div class="glass" data-card="diligencia"><div class="ctitle">Em diligência<button class="hbtn" data-csv="diligencia">CSV</button></div><div id="c-diligencia"></div></div>
+  </div>
+</section>
+
+<footer>Projeto de portfólio · dados 100% sintéticos · código do zero</footer>
+</div>
+
 <script>
 /*__DADOS__*/
+/*__MAPA__*/
 </script>
 <script>
 /*__AGREGAR__*/
 </script>
 <script>
 /*__EXPORTAR__*/
+</script>
+<script>
+/* ======================= utilidades ======================= */
+const D = DADOS, A = Agregar;
+const $ = id => document.getElementById(id);
+const QS = (s, el = document) => [...el.querySelectorAll(s)];
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MENOS = "−";
+const nf = c => new Intl.NumberFormat("pt-BR", {minimumFractionDigits: c, maximumFractionDigits: c});
+const fI = nf(0), f1 = nf(1), f2 = nf(2);
+const ok = v => v !== null && v !== undefined && isFinite(v);
+const int = v => ok(v) ? fI.format(Math.round(v)) : "—";
+const brlC = v => !ok(v) ? "—" : Math.abs(v) >= 1e6 ? "R$ " + f1.format(v / 1e6) + " mi" : Math.abs(v) >= 1e3 ? "R$ " + fI.format(v / 1e3) + " mil" : "R$ " + fI.format(v);
+const p1 = v => ok(v) ? f1.format(v) + "%" : "—";
+const p2 = v => ok(v) ? f2.format(v) + "%" : "—";
+const ppTxt = d => !ok(d) ? "—" : Math.abs(d) < 0.05 ? "igual" : (d > 0 ? "+" : MENOS) + f1.format(Math.abs(d)) + " p.p.";
+const dBR = s => s.slice(8, 10) + "/" + s.slice(5, 7);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const css = v => getComputedStyle(document.body).getPropertyValue(v).trim();
+const store = {get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+               set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }};
+function mostrar(el, sim) { el = typeof el === "string" ? $(el) : el; if (el) el.classList.toggle("oculto", !sim); return sim; }
+function rgba(cor, a) {
+  const c = cor.replace("#", ""); const n = parseInt(c.length === 3 ? c.split("").map(x => x + x).join("") : c, 16);
+  return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+}
+const addDias = (iso, n) => new Date(Date.parse(iso + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10);
+const HOJE = D.hoje;
+const VAZIO = msg => `<div class="vazio">${msg || "Sem processos no filtro atual."}</div>`;
+function trocarHTML(el, html) {
+  if (el.innerHTML === html) return;
+  el.innerHTML = html; el.classList.remove("fade"); void el.offsetWidth; el.classList.add("fade");
+}
+function contar(el, ate, fmt) {
+  const de = +(el.dataset.v ?? ate); el.dataset.v = ate;
+  if (RM || de === ate) { el.textContent = fmt(ate); return; }
+  const t0 = performance.now(), dur = 600; el.classList.add("animating");
+  const passo = t => { const x = Math.min(1, (t - t0) / dur), e = x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    el.textContent = fmt(de + (ate - de) * e); if (x < 1) requestAnimationFrame(passo); else el.classList.remove("animating"); };
+  requestAnimationFrame(passo);
+}
+/* cores das etapas (Okabe-Ito, seguras para daltonismo), na ordem processual */
+const ETAPAS = A.ETAPAS;
+const COR_ETAPA = ["#56B4E9", "#E69F00", "#009E73", "#CC79A7", "#F0E442", "#D55E00"];   // no escuro o azul-escuro some: expedido vira amarelo
+const COR_ETAPA_CLARO = ["#2b8ccf", "#b87a00", "#00795a", "#a94f85", "#005a8c", "#b34700"];
+const corEtapa = i => (document.body.dataset.theme === "light" ? COR_ETAPA_CLARO : COR_ETAPA)[i];
+
+/* ======================= estado ======================= */
+const S = {agora: "17:05", aba: "oper", ordAdv: "processos", vistaAdv: "barras", ce: "qtd", R: null,
+           f: {uf: [], carteira: [], adv: [], etapa: [], produto: [], de: null, ate: null}};
+const graf = {};
+const pubAtual = () => D.publicacoes.find(p => p.agora === S.agora);
+
+/* ======================= fundo animado ======================= */
+(function particulas() {
+  const cv = $("bg"), ctx = cv.getContext("2d");
+  let W, H, P = [], mx = -9999, my = -9999;
+  function criar() {
+    W = cv.width = innerWidth; H = cv.height = innerHeight;
+    const n = Math.min(110, Math.floor(W * H / 15000));
+    P = Array.from({length: n}, () => ({x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35}));
+  }
+  function frame(mover) {
+    const dot = css("--p-dot"), line = css("--p-line"), mouse = css("--p-mouse");
+    ctx.clearRect(0, 0, W, H);
+    for (const p of P) {
+      if (mover) { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1;
+        const dx = p.x - mx, dy = p.y - my, dm = Math.hypot(dx, dy);
+        if (dm < 150 && dm > 0.01) { const f = (150 - dm) / 150 * .9; p.x += dx / dm * f; p.y += dy / dm * f; } }
+      ctx.beginPath(); ctx.arc(p.x, p.y, 1.7, 0, Math.PI * 2); ctx.fillStyle = dot; ctx.fill();
+      const dm = Math.hypot(p.x - mx, p.y - my);
+      if (dm < 170) { ctx.strokeStyle = `rgba(${mouse},${(170 - dm) / 170 * .5})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(mx, my); ctx.stroke(); }
+    }
+    ctx.lineWidth = .8;
+    for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+      const d = Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y);
+      if (d < 120) { ctx.strokeStyle = `rgba(${line},${(120 - d) / 120 * .22})`; ctx.beginPath(); ctx.moveTo(P[i].x, P[i].y); ctx.lineTo(P[j].x, P[j].y); ctx.stroke(); }
+    }
+  }
+  function loop() { if (!document.hidden) frame(true); requestAnimationFrame(loop); }
+  addEventListener("resize", () => { if (innerWidth !== W) criar(); else { H = cv.height = innerHeight; } if (RM) frame(false); });
+  addEventListener("mousemove", e => { mx = e.clientX; my = e.clientY; });
+  document.addEventListener("mouseout", e => { if (!e.relatedTarget) mx = my = -9999; });
+  criar();
+  if (RM) { frame(false); window.redesenharFundo = () => frame(false); } else { window.redesenharFundo = () => {}; loop(); }
+})();
+
+/* ======================= gráficos (atualizam no lugar) ======================= */
+function grafico(id, cfg) {
+  const el = $(id); if (!el || typeof Chart === "undefined") return;
+  Chart.defaults.color = css("--chart-c"); Chart.defaults.borderColor = css("--chart-b"); Chart.defaults.font.family = "Inter";
+  cfg.options = Object.assign({responsive: true, maintainAspectRatio: false, animation: RM ? false : {duration: 550}}, cfg.options || {});
+  const g = graf[id];
+  if (g && g.config.type === cfg.type) { g.data = cfg.data; g.options = cfg.options; g.update(); return; }
+  if (g) g.destroy();
+  graf[id] = new Chart(el, cfg);
+}
+function destruirGraficos() { for (const k in graf) { graf[k].destroy(); delete graf[k]; } }
+const tickRS = {ticks: {callback: v => brlC(v)}};
+
+/* ======================= topo ======================= */
+function renderTopo() {
+  const pub = pubAtual(), foto = D.fotos[pub.foto];
+  const selo = $("selo");
+  selo.textContent = `dados de ${pub.quando} (${dBR(foto.dia)}) · ${pub.origem === "oficial" ? "tabela oficial" : "ao vivo"}`;
+  selo.className = "badge " + pub.origem;
+  const c = pub.conciliacao;
+  $("conc").textContent = !c ? "conciliação: aguardando a 1ª recarga da tabela oficial (09:04)"
+    : c.ok ? `conciliado com a tabela oficial das ${c.recarga} ✓ (${int(c.empates_fora)} pastas com empate fora da comparação)`
+    : `conciliação com a tabela oficial das ${c.recarga}: divergente`;
+  const avisos = [...pub.avisos];
+  if (c && !c.ok) avisos.push("Regra do painel diverge da tabela oficial — verificar alteração na regra oficial.");
+  $("aviso").innerHTML = avisos.map(esc).join("<br>"); mostrar("aviso", avisos.length > 0);
+  QS("#segAgora [data-agora]").forEach(b => b.classList.toggle("on", b.dataset.agora === S.agora));
+}
+
+/* ======================= filtros ======================= */
+const GRUPOS = {uf: "fUF", carteira: "fCarteira", adv: "fAdv", etapa: "fEtapa", produto: "fProduto"};
+function opcoes() {
+  const rows = A.linhas(D, pubAtual().foto);
+  const ord = (xs, ultimo) => [...new Set(xs.filter(x => x !== null))].sort((a, b) => (a === ultimo) - (b === ultimo) || (a < b ? -1 : a > b ? 1 : 0));
+  const datas = rows.map(r => r.data).filter(d => d !== null);
+  return {uf: ord(rows.map(r => r.uf)), carteira: ord(rows.map(r => r.carteira), "(vazio)"), adv: ord(rows.map(r => r.adv), "(sem advogado)"),
+          etapa: ETAPAS.filter(e => rows.some(r => r.fase === e)), produto: ord(rows.map(r => r.produto), "(sem produto)"),
+          min: datas.length ? addDias(HOJE, Math.min(...datas)) : "", max: datas.length ? addDias(HOJE, Math.max(...datas)) : ""};
+}
+function construirFiltros() {
+  const o = opcoes();
+  let mudou = false;
+  for (const g in GRUPOS) {
+    const antes = S.f[g].length; S.f[g] = S.f[g].filter(v => o[g].includes(v)); mudou = mudou || S.f[g].length !== antes;
+    $(GRUPOS[g]).innerHTML = o[g].map(v => `<button class="chip${S.f[g].includes(v) ? " on" : ""}" data-g="${g}" data-v="${esc(v)}">${esc(v)}</button>`).join("");
+  }
+  $("fDe").min = $("fAte").min = o.min; $("fDe").max = $("fAte").max = o.max;
+  return mudou;
+}
+function alternar(g, v) { const i = S.f[g].indexOf(v); if (i >= 0) S.f[g].splice(i, 1); else S.f[g].push(v); render(); }
+function renderAtivos() {
+  for (const g in GRUPOS) QS(`#${GRUPOS[g]} .chip`).forEach(b => b.classList.toggle("on", S.f[g].includes(b.dataset.v)));
+  $("fDe").value = S.f.de || ""; $("fAte").value = S.f.ate || "";
+  const chips = [];
+  for (const g in GRUPOS) for (const v of S.f[g]) chips.push(`<button class="chip on" data-rm="${g}" data-v="${esc(v)}">${esc(v)} ×</button>`);
+  if (S.f.de || S.f.ate) chips.push(`<button class="chip on" data-rm="datas">${S.f.de ? dBR(S.f.de) : "…"} a ${S.f.ate ? dBR(S.f.ate) : "…"} ×</button>`);
+  $("ativos").innerHTML = chips.length ? "Filtros ativos: " + chips.join("") : ""; mostrar("ativos", chips.length > 0);
+}
+function abrirExtra(sim) { mostrar("extra", sim); $("maisFiltros").setAttribute("aria-expanded", sim); }
+
+/* ======================= abas e render ======================= */
+function aplicarAba(a) {
+  if (!["oper", "gest", "planilha"].includes(a)) a = "oper";
+  S.aba = a; store.set("bap_aba", a);
+  QS("[data-aba]").forEach(b => { b.classList.toggle("on", b.dataset.aba === a); b.setAttribute("aria-selected", b.dataset.aba === a); });
+  for (const v of ["oper", "gest", "planilha"]) { const el = $("v-" + v); mostrar(el, v === a); if (v === a && !RM) { el.classList.remove("entra"); void el.offsetWidth; el.classList.add("entra"); } }
+  renderAba(); for (const k in graf) graf[k].resize();
+}
+function renderAba() {
+  const R = S.R;
+  if (S.aba === "oper") renderOper(R); else if (S.aba === "gest") renderGest(R); else renderPlanilha(R);
+}
+function render() {
+  S.R = A.tudo(D, S.agora, S.f);
+  renderTopo(); renderAtivos(); renderAba();
+}
+function aplicarTema(t) {
+  if (!["midnight", "dark", "light"].includes(t)) t = "midnight";
+  document.body.dataset.theme = t; store.set("bap_tema", t);
+  QS("#segTema [data-tema]").forEach(b => b.classList.toggle("on", b.dataset.tema === t));
+  window.redesenharFundo();
+}
+
+/* ======================= Operação ======================= */
+const KPIS = [["processos", "Processos", false], ["diligencia", "Em diligência", false], ["vencidos", "Vencidos", true],
+              ["hoje", "Vencem hoje", true], ["prox7", "Próximos 7 dias", false], ["risco", "Risco total", false]];
+function linhaVar(k, ruim, atual, ref, rotulo) {
+  if (!ref) return `<div class="dl">— ${rotulo}</div>`;
+  const d = atual - ref.kpis[k];
+  const fmt = k === "risco" ? v => brlC(Math.abs(v)) : v => int(Math.abs(v));
+  const cls = !ruim || d === 0 ? "" : d < 0 ? "up-t" : "down-t";
+  const txt = d > 0 ? `▲ +${fmt(d)}` : d < 0 ? `▼ ${fmt(d)}` : "=";
+  return `<div class="dl ${cls}" title="${esc(rotulo)}">${txt} ${rotulo}</div>`;
+}
+function renderKpis(R) {
+  const K = R.kpis, el = $("kpis");
+  if (!el.children.length) el.innerHTML = KPIS.map(([k, l]) => `<div class="kpi" id="k-${k}"><div class="l">${l}</div><div class="v">0</div><div class="vars"></div></div>`).join("");
+  const ini = K.inicio ? `vs início do dia (${K.inicio.hora})` : "vs início do dia";
+  const ant = K.anterior ? `vs última foto anterior (${dBR(K.anterior.dia)} ${K.anterior.hora})${K.anterior.origem === "reconstruido" ? ", reconstruída" : ""}` : "vs última foto anterior";
+  for (const [k, , ruim] of KPIS) {
+    const card = $("k-" + k), v = K.atual[k];
+    card.classList.toggle("down", ruim && v > 0);
+    contar(card.querySelector(".v"), v, k === "risco" ? brlC : int);
+    card.querySelector(".vars").innerHTML = linhaVar(k, ruim, v, K.inicio, ini) + linhaVar(k, ruim, v, K.anterior, ant);
+  }
+}
+function renderEscada(R) {
+  const e = R.escada, el = $("c-escada");
+  if (!e) return trocarHTML(el, VAZIO("Nenhum processo em fase de mandado no filtro atual."));
+  const cores = {REQUERIDO: css("--compB"), EXPEDIDO: css("--compA"), NEGATIVO: css("--neg")};
+  const max = Math.max(...e.linhas.flatMap(l => ["REQUERIDO", "EXPEDIDO", "NEGATIVO"].map(s => l[s])), 1);
+  const cel = (l, s) => `<td style="background:${rgba(cores[s], l[s] / max * .55)}">${int(l[s])}</td>`;
+  trocarHTML(el, `<div class="tblwrap"><table class="t"><thead><tr><th>Tentativa</th><th>Requerido</th><th>Expedido</th><th>Negativo</th><th>Total</th><th>Chegou</th></tr></thead><tbody>` +
+    e.linhas.map(l => `<tr><td>${l.tentativa}</td>${cel(l, "REQUERIDO")}${cel(l, "EXPEDIDO")}${cel(l, "NEGATIVO")}<td><b>${int(l.total)}</b></td><td>${p1(l.chegou)}</td></tr>`).join("") +
+    `</tbody></table></div>`);
+}
+function renderPrazos(R) {
+  const p = R.prazos;
+  mostrar("b-prazos", p.length > 0); trocarHTML($("v-prazos"), p.length ? "" : VAZIO());
+  if (!p.length) return;
+  const series = [["vencidos", "--neg", 1], ["hoje", "--compB", 2], ["7 dias", "--compA", 3], ["depois", "--flat", 4], ["sem data", "--chart-b", 5]];
+  grafico("g-prazos", {type: "bar", data: {labels: p.map(x => x[0]), datasets: series.map(([l, c, i]) => ({label: l, data: p.map(x => x[i]), backgroundColor: css(c), borderRadius: 3}))},
+    options: {indexAxis: "y", scales: {x: {stacked: true}, y: {stacked: true}}, plugins: {legend: {position: "bottom", labels: {boxWidth: 12, usePointStyle: true}}}}});
+}
+const ORD_ADV = {processos: x => x.processos, vencidos: x => x.vencidos, pct_venc: x => x.pct_venc ?? -1, risco: x => x.risco, hoje: x => x.hoje};
+function renderAdvogados(R) {
+  const a = R.advogados, el = $("c-adv");
+  const lin = [...a.linhas].sort((x, y) => ((x.adv === "(sem advogado)") - (y.adv === "(sem advogado)")) || (ORD_ADV[S.ordAdv](y) - ORD_ADV[S.ordAdv](x)) || (y.processos - x.processos) || (x.adv < y.adv ? -1 : 1));
+  const vazio = !lin.length;
+  mostrar("b-disp", !vazio && S.vistaAdv === "disp"); mostrar(el, vazio || S.vistaAdv === "barras");
+  if (vazio) { trocarHTML(el, VAZIO()); $("leg-adv").innerHTML = ""; $("regra-adv").innerHTML = ""; return; }
+  const max = Math.max(...lin.map(x => x.processos), 1);
+  if (S.vistaAdv === "barras") {
+    const linhas = lin.map(x => {
+      const sinais = (x.carga_alta || x.venc_alto ? "<br>" : "") + (x.carga_alta ? `<span class="sinal carga">carga alta, ${f1.format(x.razao)}× a mediana</span>` : "") + (x.venc_alto ? `<span class="sinal venc">vencidos alto</span>` : "");
+      const segs = x.etapas.map((n, i) => n ? `<i style="width:${n / x.processos * 100}%;background:${corEtapa(i)}" title="${ETAPAS[i]}: ${n}"></i>` : "").join("");
+      const med = a.mediana ? `<span class="med" style="left:${a.mediana / max * 100}%"></span>` : "";
+      return `<div class="advl${S.f.adv.includes(x.adv) ? " sel" : ""}" tabindex="0" role="button" data-adv="${esc(x.adv)}"><div class="n">${esc(x.adv)}${sinais}</div>
+        <div class="trilho"><div class="barra" style="width:${x.processos / max * 100}%">${segs}</div><span class="traco" style="width:${x.vencidos / max * 100}%"></span>${med}</div>
+        <div class="r"><b>${int(x.processos)}</b></div><div class="r ${x.venc_alto ? "down-t" : ""}">${int(x.vencidos)} <small>${p1(x.pct_venc)}</small></div><div class="r">${int(x.hoje)}</div><div class="r">${brlC(x.risco)}</div></div>`;
+    }).join("");
+    trocarHTML(el, `<div class="advlista"><div class="advcab"><span>Advogado</span><span>Processos por etapa</span><span class="r">Total</span><span class="r">Vencidos</span><span class="r">Hoje</span><span class="r">Risco</span></div>${linhas}</div>`);
+  } else {
+    const pts = lin.filter(x => x.adv !== "(sem advogado)" && x.processos > 0);
+    const ys = pts.map(x => x.pct_venc), xmax = Math.max(10, Math.ceil(Math.max(...pts.map(x => x.processos), 0) * 1.08));
+    const ymin = pts.length ? Math.max(0, Math.floor((Math.min(...ys) - 8) / 10) * 10) : 0;
+    const ds = [{type: "scatter", label: "advogados", data: pts.map(x => ({x: x.processos, y: x.pct_venc, adv: x.adv})),
+      pointRadius: 6, pointHoverRadius: 8, backgroundColor: pts.map(x => x.carga_alta || x.venc_alto ? css("--neg") : css("--compA"))}];
+    if (a.mediana) ds.push({type: "line", label: "mediana de processos", data: [{x: a.mediana, y: ymin}, {x: a.mediana, y: 100}], borderColor: css("--flat"), borderDash: [5, 4], pointRadius: 0});
+    if (a.pct_carteira !== null) ds.push({type: "line", label: "% vencidos da carteira", data: [{x: 0, y: a.pct_carteira}, {x: xmax, y: a.pct_carteira}], borderColor: css("--flat"), borderDash: [5, 4], pointRadius: 0});
+    grafico("g-disp", {type: "scatter", data: {datasets: ds}, plugins: [rotulosDisp],
+      options: {scales: {x: {min: 0, max: xmax, title: {display: true, text: "processos"}}, y: {min: ymin, max: 100, ticks: {callback: v => v + "%"}}},
+        plugins: {legend: {position: "bottom", labels: {filter: it => it.text !== "advogados", boxWidth: 12}},
+          tooltip: {callbacks: {label: c => c.raw.adv ? `${c.raw.adv}: ${int(c.raw.x)} processos, ${p1(c.raw.y)} vencidos` : c.dataset.label}}},
+        onClick: (ev, els) => { const e = els.find(x => x.datasetIndex === 0); if (e) { abrirExtra(true); alternar("adv", pts[e.index].adv); } }}});
+  }
+  $("leg-adv").innerHTML = ETAPAS.map((e, i) => `<span><i style="background:${corEtapa(i)}"></i>${e}</span>`).join("") + `<span><i style="background:var(--neg);height:3px"></i>vencidos</span>` + (a.mediana ? `<span><i style="border-left:2px dashed var(--t2);background:none;width:2px"></i>mediana de processos</span>` : "");
+  $("regra-adv").innerHTML = "Vencido = data de agendamento já passou. " + (a.mediana
+    ? `<b>Carga alta</b>: 1,25× ou mais a mediana de ${int(a.mediana)} processos (traço vertical), entre os ${a.n_comparaveis} advogados com 30+ processos no filtro. `
+    : "<b>Carga alta</b>: sem comparação no filtro atual (precisa de 3 ou mais advogados com 30+ processos). ") +
+    `<b>Vencidos alto</b>: % de vencidos 10 pontos ou mais acima da carteira filtrada (${p1(a.pct_carteira)}), também só para 30+ processos.`;
+}
+const rotulosDisp = {id: "rotulosDisp", afterDatasetsDraw(ch) {
+  const m = ch.getDatasetMeta(0), ctx = ch.ctx; ctx.save(); ctx.font = "600 11px Inter"; ctx.fillStyle = css("--t2");
+  m.data.forEach((p, i) => { const raw = ch.data.datasets[0].data[i]; const perto = ch.chartArea.right - p.x < 90;
+    ctx.textAlign = perto ? "right" : "left"; ctx.fillText(raw.adv, p.x + (perto ? -9 : 9), p.y + 4); });
+  ctx.restore(); }};
+
+/* ---------- mapa por UF (SVG próprio) ---------- */
+let MAPA = null;
+function iniciarMapa() {
+  const box = $("mapa"), ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg"); svg.setAttribute("viewBox", MAPA_UF.viewBox); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Mapa do Brasil por UF");
+  const gBase = document.createElementNS(ns, "g"), gSel = document.createElementNS(ns, "g"), gHover = document.createElementNS(ns, "g");
+  const paths = {};
+  for (const [uf, d] of Object.entries(MAPA_UF.ufs)) {
+    const p = document.createElementNS(ns, "path"); p.setAttribute("d", d); p.setAttribute("tabindex", "0"); p.setAttribute("aria-label", uf); p.dataset.uf = uf;
+    p.onclick = () => alternar("uf", uf);
+    p.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); alternar("uf", uf); } };
+    p.onmouseenter = p.onfocus = ev => mostrarDica(uf, ev); p.onmousemove = ev => mostrarDica(uf, ev); p.onmouseleave = p.onblur = () => { $("dica").style.opacity = 0; gHover.innerHTML = ""; };
+    gBase.appendChild(p); paths[uf] = p;
+  }
+  svg.append(gBase, gSel, gHover); box.prepend(svg);
+  $("brasil").onclick = () => { S.f.uf = []; render(); };
+  const vb = MAPA_UF.viewBox.split(" ").map(Number);
+  MAPA = {svg, paths, gSel, gHover, vb, atual: vb.slice()};
+}
+function mostrarDica(uf, ev) {
+  const m = S.R.mapa_uf[uf] || [0, 0, 0], dica = $("dica"), box = $("mapa").getBoundingClientRect();
+  dica.innerHTML = `<b>${uf}</b><br>${int(m[0])} processos<br>${brlC(m[1])} de risco`;
+  const r = ev.clientX ? {x: ev.clientX, y: ev.clientY} : (() => { const b = ev.target.getBoundingClientRect(); return {x: b.x + b.width / 2, y: b.y}; })();
+  dica.style.left = Math.min(box.width - 140, Math.max(0, r.x - box.left + 12)) + "px"; dica.style.top = (r.y - box.top + 12) + "px"; dica.style.opacity = 1;
+  MAPA.gHover.innerHTML = ""; const c = MAPA.paths[uf].cloneNode(); c.removeAttribute("tabindex"); c.style.cssText = `fill:none;stroke:${css("--strong")};stroke-width:1.6;pointer-events:none`; MAPA.gHover.appendChild(c);
+}
+function animarViewBox(alvo) {
+  const de = MAPA.atual.slice(); MAPA.atual = alvo;
+  if (RM) return MAPA.svg.setAttribute("viewBox", alvo.join(" "));
+  const t0 = performance.now();
+  const passo = t => { const x = Math.min(1, (t - t0) / 650), e = x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    MAPA.svg.setAttribute("viewBox", de.map((v, i) => v + (alvo[i] - v) * e).join(" ")); if (x < 1) requestAnimationFrame(passo); };
+  requestAnimationFrame(passo);
+}
+function renderMapa(R) {
+  if (!MAPA) iniciarMapa();
+  const m = R.mapa_uf, max = Math.max(1, ...Object.values(m).map(v => v[0])), base = css("--compA"), sel = S.f.uf, claro = document.body.dataset.theme === "light";
+  for (const [uf, p] of Object.entries(MAPA.paths)) {
+    const q = (m[uf] || [0])[0];
+    p.style.fill = q ? rgba(base, .18 + .82 * q / max) : css("--grid0");
+    p.style.opacity = sel.length && !sel.includes(uf) ? (claro ? .5 : .38) : 1;
+  }
+  MAPA.gSel.innerHTML = "";
+  for (const uf of sel) { const c = MAPA.paths[uf]; if (!c) continue; const k = c.cloneNode(); k.removeAttribute("tabindex"); k.style.cssText = `fill:none;stroke:${css("--ac")};stroke-width:2.2;pointer-events:none`; MAPA.gSel.appendChild(k); }
+  $("brasil").classList.toggle("on", sel.length > 0);
+  // zoom: caixa das UFs selecionadas, mesma proporção do Brasil
+  const [x0, y0, W, H] = MAPA.vb;
+  if (!sel.length) animarViewBox(MAPA.vb.slice());
+  else {
+    const bs = sel.map(uf => MAPA.paths[uf] && MAPA.paths[uf].getBBox()).filter(Boolean);
+    const xa = Math.min(...bs.map(b => b.x)), ya = Math.min(...bs.map(b => b.y)), xb = Math.max(...bs.map(b => b.x + b.width)), yb = Math.max(...bs.map(b => b.y + b.height));
+    const prop = W / H, lado = Math.min(Math.max(xb - xa, (yb - ya) * prop, 70) * 1.25, W * 1.05), alt = lado / prop;
+    animarViewBox([(xa + xb) / 2 - lado / 2, (ya + yb) / 2 - alt / 2, lado, alt]);
+  }
+  const topo = Object.entries(m).sort((a, b) => b[1][0] - a[1][0] || (a[0] < b[0] ? -1 : 1)).slice(0, 6);
+  $("leg-mapa").innerHTML = topo.map(([uf, v]) => `<span><b>${uf}</b> ${int(v[0])}</span>`).join("");
+}
+
+/* ---------- detalhe da região ---------- */
+const NOME_UF = D.dic.nome_uf;
+function leadPerfil(lista) { const x = lista.find(([k]) => !k.startsWith("(") && k !== "sem ano"); return x || null; }
+function renderRegiao(R) {
+  const card = $("card-regiao"), g = R.regioes;
+  const antes = !card.classList.contains("oculto");
+  mostrar(card, !!g); if (!g) return;
+  if (!antes && !RM) { card.classList.remove("surge"); void card.offsetWidth; card.classList.add("surge"); }
+  $("reg-chips").innerHTML = g.ufs.map(u => `<button class="chip on" data-rm="uf" data-v="${u.uf}">${u.uf} ×</button>`).join("");
+  $("reg-desc").textContent = (g.modo === 1 ? "Números da UF com os demais filtros ativos, comparados ao Brasil (todas as UFs, mesmos filtros)."
+    : g.modo === 2 ? "Uma coluna por UF com os demais filtros ativos; Brasil = todas as UFs com os mesmos filtros."
+    : "Mais de 4 UFs: tabela comparativa; clique no título da coluna para ordenar.") + " Clique na sigla para tirar a UF.";
+  const el = $("c-regiao");
+  if (g.modo === 1) trocarHTML(el, regiaoUma(g.ufs[0], g.brasil));
+  else if (g.modo === 2) trocarHTML(el, regiaoColunas(g));
+  else trocarHTML(el, regiaoTabela(g));
+}
+function tileReg(rot, u, b, campo, ruim) {
+  const vu = u.pct[campo] ?? null, vb = b.pct[campo] ?? null, d = ok(vu) && ok(vb) ? vu - vb : null;
+  const cls = !ruim || !ok(d) || Math.abs(d) < .05 ? "" : d > 0 ? "down-t" : "up-t";
+  return `<div class="tile"><div class="tl">${rot}</div><div class="tv">${p1(vu)}</div><div class="ts">${int(u.kpis[campo])} processos</div><div class="ts">Brasil ${p1(vb)} · <span class="${cls}">${ppTxt(d)}</span></div></div>`;
+}
+function regiaoUma(u, b) {
+  const negD = ok(u.pct_negativo) && ok(b.pct_negativo) ? u.pct_negativo - b.pct_negativo : null;
+  const rel = ok(u.risco_medio) && ok(b.risco_medio) && b.risco_medio ? (u.risco_medio / b.risco_medio - 1) * 100 : null;
+  const n = u.kpis.processos, nb = b.kpis.processos;
+  const etapas = u.etapas.map(([e, q], i) => { const pu = n ? q / n * 100 : 0, pb = nb ? b.etapas[i][1] / nb * 100 : 0;
+    return `<div class="bul"><span>${e}</span><span class="tr"><i style="width:${pu}%;background:${corEtapa(i)}"></i><em style="left:${pb}%"></em></span><span><b>${p1(pu)}</b> ${int(q)}, Brasil ${p1(pb)}</span></div>`; }).join("");
+  const com = u.comarcas.length ? `<div class="tblwrap"><table class="t"><thead><tr><th>Comarca</th><th>Processos</th><th>% negativo</th></tr></thead><tbody>${u.comarcas.map(c => `<tr><td>${esc(c[0])}</td><td>${int(c[2])}</td><td class="${c[3] >= 50 ? "ruim" : ""}">${p1(c[3])}</td></tr>`).join("")}</tbody></table></div>` : VAZIO();
+  const adv = u.advogados;
+  return `<div class="reg-cab"><span class="uf">${u.uf}</span><span class="muted">${esc(NOME_UF[u.uf] || "")}</span><span><b>${int(n)}</b> processos, ${p1(u.part_processos)} do Brasil</span><span><b>${brlC(u.kpis.risco)}</b> de risco, ${p1(u.part_risco)} do Brasil</span></div>
+    <div class="tiles">${tileReg("Vencidos (data de agendamento já passou)", u, b, "vencidos", true)}${tileReg("Vencem hoje", u, b, "hoje", true)}${tileReg("Próximos 7 dias", u, b, "prox7", false)}${tileReg("Em diligência (1º mandado expedido)", u, b, "diligencia", false)}
+      <div class="tile"><div class="tl">Em mandado negativo</div><div class="tv">${p1(u.pct_negativo)}</div><div class="ts">${int(u.negativo)} processos</div><div class="ts">Brasil ${p1(b.pct_negativo)} · <span class="${!ok(negD) || Math.abs(negD) < .05 ? "" : negD > 0 ? "down-t" : "up-t"}">${ppTxt(negD)}</span></div></div>
+      <div class="tile"><div class="tl">Risco médio por processo</div><div class="tv">${brlC(u.risco_medio)}</div><div class="ts">Brasil ${brlC(b.risco_medio)}${ok(rel) && Math.abs(rel) >= .05 ? ` · ${rel > 0 ? "+" : MENOS}${f1.format(Math.abs(rel))}%` : ""}</div></div></div>
+    <div class="g2"><div><div class="lb">Etapas (barra = UF, traço = Brasil)</div>${etapas}</div>
+      <div><div class="lb">Comarcas com mais processos</div>${com}
+        <div class="lb" style="margin-top:12px">Advogados</div><div class="muted"><b>${int(adv.qtd)}</b> advogados com processos na UF${adv.mais ? `<br>Com mais processos: ${esc(adv.mais[0])}, <b>${int(adv.mais[1])}</b> (${f1.format(adv.mais[2])}% da UF)` : ""}${adv.sem_advogado ? `<br>Sem advogado operacional: <b>${int(adv.sem_advogado)}</b>` : ""}</div></div></div>
+    ${perfilBlocos(u.perfil, b.perfil)}`;
+}
+function regiaoColunas(g) {
+  const U = g.ufs, B = g.brasil;
+  const linha = (rot, f, fmt, escala, ruim, cont) => {
+    const vals = U.map(f), vb = f(B), max = Math.max(...vals.filter(ok), ...(escala === "todas" && ok(vb) ? [vb] : []), 0);
+    const validos = vals.filter(ok), maior = validos.length >= 2 && new Set(validos).size > 1 ? Math.max(...validos) : null, menor = maior !== null ? Math.min(...validos) : null;
+    const cel = (v, i) => { const mk = v === maior ? `<span class="ponto">●</span>` : v === menor ? `<span class="ponto">○</span>` : "";
+      const bar = ok(v) && max ? `<span class="mini" style="width:${Math.max(1.5, v / max * 100)}%"></span>` : "";
+      return `<td>${mk}<span class="${v === maior ? "mx" + (ruim ? " ruim" : "") : ""}">${fmt(v)}</span>${cont ? ` <small class="muted">${int(cont(U[i]))}</small>` : ""}${bar}</td>`; };
+    const barB = escala === "todas" && ok(vb) && max ? `<span class="mini" style="width:${Math.max(1.5, vb / max * 100)}%"></span>` : "";
+    return `<tr><td>${rot}</td>${vals.map(cel).join("")}<td class="br">${fmt(vb)}${cont ? ` <small>${int(cont(B))}</small>` : ""}${barB}</td></tr>`;
+  };
+  const grp = t => `<tr class="grp"><td colspan="${U.length + 2}">${t}</td></tr>`;
+  const txt = (rot, f) => `<tr><td>${rot}</td>${U.map(u => `<td>${f(u)}</td>`).join("")}<td class="br">${f(B)}</td></tr>`;
+  const perf = (bloco) => u => { const x = leadPerfil(u.perfil[bloco]); return x ? `${esc(x[0])} (${p1(x[1] / u.perfil.base * 100)})` : "—"; };
+  const rows = [grp("Volume"), linha("Processos", u => u.kpis.processos, int, "ufs"), linha("Participação nos processos do Brasil", u => u.part_processos ?? null, p1, "ufs"),
+    linha("Risco total", u => u.kpis.risco, brlC, "ufs"), linha("Risco médio por processo", u => u.risco_medio, brlC, "todas"),
+    grp("Prazos, em % dos processos da região"), linha("Vencidos", u => u.pct.vencidos, p1, "todas", true, u => u.kpis.vencidos),
+    linha("Vencem hoje", u => u.pct.hoje, p1, "todas", true, u => u.kpis.hoje), linha("Próximos 7 dias", u => u.pct.prox7, p1, "todas", false, u => u.kpis.prox7),
+    linha("Em diligência (1º mandado expedido)", u => u.pct.diligencia, p1, "todas", false, u => u.kpis.diligencia),
+    grp("Etapas, em % dos processos da região"), ...ETAPAS.map((e, i) => linha(e, u => u.kpis.processos ? u.etapas[i][1] / u.kpis.processos * 100 : null, p1, "todas", e === "MANDADO NEGATIVO", u => u.etapas[i][1])),
+    grp("Equipe, comarcas e veículo"), linha("Advogados", u => u.advogados.qtd, int, "ufs"),
+    txt("Advogado com mais processos", u => u.advogados.mais ? `${esc(u.advogados.mais[0])}: ${int(u.advogados.mais[1])} (${fI.format(u.advogados.mais[2])}%)` : "—"),
+    txt("Comarcas com mais processos", u => u.comarcas.slice(0, 3).map(c => `${esc(c[0])}: ${int(c[2])}`).join("<br>") || "—"),
+    txt("Produto mais frequente", perf("produto")), txt("Idade do veículo mais frequente", perf("idade")), txt("Marca líder", perf("marcas"))];
+  return `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>Indicador</th>${U.map(u => `<th>${u.uf} <small>${esc(NOME_UF[u.uf] || "")}</small></th>`).join("")}<th class="br">Brasil <small>todas as UFs</small></th></tr></thead><tbody>${rows.join("")}</tbody></table></div>
+    <p class="regra">● maior e ○ menor valor da linha entre as UFs (vermelho quando o maior é o pior: vencidos e mandado negativo). Barras na mesma escala em cada linha; números pequenos = processos.</p>`;
+}
+let ORD_REG = {col: "processos", desc: true};
+const COLS_REG = [["uf", "UF", u => u.uf, x => x], ["processos", "Processos", u => u.kpis.processos, int], ["part", "% do Brasil", u => u.part_processos ?? null, p1],
+  ["risco", "Risco", u => u.kpis.risco, brlC], ["rmed", "Risco médio", u => u.risco_medio, brlC], ["venc", "% vencidos", u => u.pct.vencidos, p1, true],
+  ["hoje", "% hoje", u => u.pct.hoje, p1, true], ["p7", "% 7 dias", u => u.pct.prox7, p1], ["dil", "% em diligência", u => u.pct.diligencia, p1],
+  ["neg", "% mandado negativo", u => u.pct_negativo, p1, true], ["adv", "Advogados", u => u.advogados.qtd, int]];
+function regiaoTabela(g) {
+  const col = COLS_REG.find(c => c[0] === ORD_REG.col);
+  const U = [...g.ufs].sort((a, b) => { const x = col[2](a), y = col[2](b); const c = x < y ? -1 : x > y ? 1 : 0; return ORD_REG.desc ? -c : c; });
+  const marca = (c, u) => { if (c[0] === "uf") return c[3](c[2](u)); const vs = U.map(c[2]).filter(ok), v = c[2](u);
+    if (vs.length < 2 || new Set(vs).size < 2) return c[3](v); const mx = Math.max(...vs), mn = Math.min(...vs);
+    return v === mx ? `<span class="ponto">●</span><span class="mx${c[4] ? " ruim" : ""}">${c[3](v)}</span>` : v === mn ? `<span class="ponto">○</span>${c[3](v)}` : c[3](v); };
+  return `<div class="tblwrap"><table class="t"><thead><tr>${COLS_REG.map(c => `<th class="ord" data-ordreg="${c[0]}">${c[1]}${c[0] === ORD_REG.col ? (ORD_REG.desc ? " ↓" : " ↑") : ""}</th>`).join("")}</tr></thead><tbody>
+    ${U.map(u => `<tr>${COLS_REG.map(c => `<td>${marca(c, u)}</td>`).join("")}</tr>`).join("")}
+    <tr class="tot">${COLS_REG.map(c => `<td class="br">${c[0] === "uf" ? "Brasil" : c[3](c[2](g.brasil))}</td>`).join("")}</tr></tbody></table></div>
+    <p class="regra">Percentuais sobre os processos de cada UF. Ponto cheio = maior e vazado = menor da coluna entre as UFs (vermelho quando o maior é o pior). Brasil = todas as UFs com os mesmos filtros.</p>`;
+}
+
+/* ---------- movimentação e produtivos por agendamento ---------- */
+function renderMov(R) {
+  const m = R.movimentacao, pub = pubAtual(), base = pub.base !== null ? D.fotos[pub.base] : null;
+  $("mov-desc").textContent = `Comparado com a primeira foto do dia${base ? ` (${base.hora})` : ""}, com os mesmos filtros.`;
+  const el = $("c-mov");
+  if (m.vazia === "oficial") return trocarHTML(el, VAZIO("A publicação atual veio da tabela oficial: a movimentação compara rodadas ao vivo e volta na próxima atualização."));
+  if (m.vazia) return trocarHTML(el, VAZIO("Sem foto anterior hoje para comparar — a movimentação aparece a partir da segunda atualização do dia."));
+  const t = (l, v) => `<div class="tile"><div class="tl">${l}</div><div class="tv">${int(v)}</div></div>`;
+  trocarHTML(el, `<div class="mtiles">${t("Entradas", m.entradas)}${t("Saídas", m.saidas)}${t("Mudanças de etapa", m.mud_etapa)}${t("Mudanças de agendamento", m.mud_agendamento)}</div>` +
+    (m.transicoes.length ? `<div class="tblwrap"><table class="t"><thead><tr><th>De</th><th style="text-align:left">Para</th><th>Processos</th></tr></thead><tbody>${m.transicoes.slice(0, 12).map(x => `<tr><td>${esc(x[0])}</td><td style="text-align:left">${esc(x[1])}</td><td>${int(x[2])}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">Nenhuma troca de tipo de tarefa desde a primeira foto do dia.</p>`));
+}
+function renderProdAg(R) {
+  const p = R.tabelas.produtivos;
+  trocarHTML($("v-prodag"), p.length ? "" : VAZIO()); mostrar($("g-prodag").parentElement, p.length > 0);
+  if (!p.length) return;
+  grafico("g-prodag", {type: "bar", data: {labels: p.map(x => x[0]), datasets: [{data: p.map(x => x[1]), backgroundColor: css("--compA"), borderRadius: 4}]},
+    options: {plugins: {legend: {display: false}}, scales: {x: {grid: {display: false}, ticks: {maxRotation: 60, minRotation: 45, autoSkip: false, font: {size: 10}}}}}});
+}
+function renderOper(R) { renderKpis(R); renderEscada(R); renderPrazos(R); renderAdvogados(R); renderMapa(R); renderRegiao(R); renderMov(R); renderProdAg(R); }
+
+/* ======================= Gestão ======================= */
+function renderDest(R) {
+  const d = R.destaques;
+  trocarHTML($("c-dest"), d.length ? d.map(x => `<div class="dest"><b>${esc(x.achado)}</b><span>${esc(x.impacto)}</span></div>`).join("") : VAZIO("Nada que mereça destaque no filtro atual."));
+}
+function renderRiscoEtapa(R) {
+  const r = R.risco_etapa;
+  $("re-desc").textContent = `Risco total ${brlC(r.risco_total)} · valor dos bens ${brlC(r.bem_total)}` + (ok(r.cobertura_mediana) ? ` · cobertura mediana (bem ÷ dívida) ${p1(r.cobertura_mediana)}` : "") + (r.sem_estoque ? ` · ${int(r.sem_estoque)} sem dado de estoque` : "");
+  mostrar($("g-re").parentElement, r.linhas.length > 0); trocarHTML($("v-re"), r.linhas.length ? "" : VAZIO());
+  if (!r.linhas.length) return;
+  grafico("g-re", {type: "bar", data: {labels: r.linhas.map(x => x[0]), datasets: [{label: "Risco", data: r.linhas.map(x => x[2]), backgroundColor: css("--compB"), borderRadius: 4},
+    {label: "Valor do bem", data: r.linhas.map(x => x[3]), backgroundColor: css("--compA"), borderRadius: 4}]},
+    options: {scales: {y: tickRS, x: {ticks: {font: {size: 10}}}}, plugins: {legend: {position: "bottom"}, tooltip: {callbacks: {label: c => `${c.dataset.label}: ${brlC(c.raw)}`}}}}});
+}
+function renderRiscoUF(R) {
+  const r = R.risco_uf;
+  if (!r.linhas.length) return trocarHTML($("c-ru"), VAZIO());
+  trocarHTML($("c-ru"), `<div class="tblwrap" style="max-height:330px"><table class="t"><thead><tr><th>UF</th><th>Processos</th><th>Risco</th><th>Bem</th><th>Cobertura</th></tr></thead><tbody>${r.linhas.map(x => `<tr><td>${x[0]}</td><td>${int(x[1])}</td><td>${brlC(x[2])}</td><td>${brlC(x[3])}</td><td>${p1(x[4])}</td></tr>`).join("")}</tbody></table></div>
+    <div class="faixas">${r.faixas.map(([f, n]) => `<span>Cobertura ${f === "sem bem ou risco <= 0" ? "sem bem ou risco <= 0" : f}: <b>${int(n)}</b></span>`).join("")}</div>`);
+}
+function renderCE(R) {
+  const c = R.carteira_etapa, M = S.ce === "qtd" ? c.qtd : c.risco, fmt = S.ce === "qtd" ? int : brlC;
+  if (!c.carteiras.length) return trocarHTML($("c-ce"), VAZIO());
+  const max = Math.max(1, ...M.flat()), base = css("--compA");
+  trocarHTML($("c-ce"), `<div class="tblwrap"><table class="t"><thead><tr><th>Carteira</th>${c.etapas.map(e => `<th>${e}</th>`).join("")}<th>Total</th></tr></thead><tbody>${c.carteiras.map((k, i) =>
+    `<tr><td>${esc(k)}</td>${M[i].map(v => `<td style="background:${rgba(base, v / max * .6)}">${fmt(v)}</td>`).join("")}<td><b>${fmt(M[i].reduce((a, b) => a + b, 0))}</b></td></tr>`).join("")}</tbody></table></div>`);
+}
+function renderComarcas(R) {
+  const c = R.comarcas;
+  trocarHTML($("c-com"), c.length ? `<div class="tblwrap"><table class="t"><thead><tr><th>Comarca</th><th>UF</th><th>Processos</th><th>% negativo</th></tr></thead><tbody>${c.map(x => `<tr><td>${esc(x[0])}</td><td>${x[1] || "—"}</td><td>${int(x[2])}</td><td class="${x[3] >= 50 ? "ruim" : ""}">${p1(x[3])}</td></tr>`).join("")}</tbody></table></div>` : VAZIO());
+}
+const pctPerfil = (v, base) => { const p = base ? v / base * 100 : 0; return p > 0 && p < 0.05 ? "<0,1%" : p1(p); };
+function blocoPerfil(titulo, lista, base, rotLead, ref) {
+  const max = Math.max(1, ...lista.map(x => x[1])), lead = leadPerfil(lista);
+  const leadRef = ref && lead ? ref.lista.find(x => x[0] === lead[0]) : null;
+  return `<div class="bloco"><div class="lb">${titulo}</div>${lead ? `<div class="lead">${pctPerfil(lead[1], base)}<small>${esc(lead[0])}, ${rotLead}${leadRef ? `; no Brasil, ${pctPerfil(leadRef[1], ref.base)}` : ""}</small></div>` : ""}
+    ${lista.map(([k, v]) => `<div class="pl"><span class="${k.startsWith("(") || k === "sem ano" ? "mudo" : ""}">${esc(k)}</span><span class="num">${int(v)}  ${pctPerfil(v, base)}</span><span class="tr"><i style="width:${v / max * 100}%"></i></span></div>`).join("")}</div>`;
+}
+function perfilBlocos(p, ref) {
+  if (!p.base) return VAZIO();
+  const r = k => ref ? {lista: ref[k], base: ref.base} : null;
+  return `<div class="blocos">${blocoPerfil("Produto", p.produto, p.base, "produto mais frequente", r("produto"))}${blocoPerfil("Idade do veículo", p.idade, p.base, "faixa de idade mais frequente", r("idade"))}${blocoPerfil("Marcas", p.marcas, p.base, "marca líder", r("marcas"))}</div>`;
+}
+function renderPerfil(R) { $("perf-desc").textContent = `Base: ${int(R.perfil.base)} processos no filtro; percentuais sobre essa base.`; trocarHTML($("c-perf"), perfilBlocos(R.perfil)); }
+function renderEvolucao(R) {
+  const e = R.evolucao, n = e.dias.filter((_, i) => !e.lacuna[i]).length;
+  const lac = e.lacuna.filter(Boolean).length, rec = e.dias.filter((_, i) => e.reconstruido[i]);
+  const ext = e.extintas.filter(v => v > 0).length;
+  $("evo-desc").textContent = n < 2 ? `O histórico começou em ${dBR(e.dias[0])}: a evolução aparece a partir do segundo dia com fotos.`
+    : "Última foto de cada dia." + (lac ? ` Dias sem foto ficam em branco (${lac}), sem interpolação.` : "") +
+      (rec.length ? ` Dias até ${dBR(rec[rec.length - 1])} reconstruídos a partir do histórico (aproximação): linha tracejada e ponto vazado.` : "") +
+      (ext ? ` O total de ${ext} dia(s) inclui EMENDA REALIZADA, etapa extinta em 03/11 (fora das linhas).` : "");
+  const tracej = ctx => e.reconstruido[ctx.p1DataIndex] ? [5, 4] : undefined;
+  grafico("g-evo", {type: "line", data: {labels: e.dias.map(dBR), datasets: ETAPAS.map((et, i) => ({label: et, data: e.por_etapa[et], borderColor: corEtapa(i), backgroundColor: corEtapa(i),
+      borderWidth: 2, tension: .25, spanGaps: false, pointRadius: 3, pointBackgroundColor: e.reconstruido.map(r => r ? "transparent" : corEtapa(i)), segment: {borderDash: tracej}}))},
+    options: {interaction: {mode: "index", intersect: false}, plugins: {legend: {position: "bottom", labels: {boxWidth: 12, usePointStyle: true}},
+      tooltip: {callbacks: {title: it => it[0].label + (e.reconstruido[it[0].dataIndex] ? " (reconstruído)" : "")}}}}});
+}
+function renderGest(R) { renderDest(R); renderRiscoEtapa(R); renderRiscoUF(R); renderCE(R); renderComarcas(R); renderPerfil(R); renderEvolucao(R); }
+
+/* ======================= Busca e Apreensão (modo planilha) ======================= */
+function tabelaPlanilha(rotulo, linhas) {
+  if (!linhas.length) return VAZIO();
+  const tot = linhas.reduce((s, x) => s + x[1], 0);
+  return `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>${rotulo}</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${linhas.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${int(v)}</td><td>${p2(v / tot * 100)}</td></tr>`).join("")}
+    <tr class="tot"><td>Total Geral</td><td>${int(tot)}</td><td>100,00%</td></tr></tbody></table></div>`;
+}
+function renderPlanilha(R) {
+  const t = R.tabelas;
+  trocarHTML($("c-produtivos"), tabelaPlanilha("Agendamento", t.produtivos));
+  trocarHTML($("c-follow"), tabelaPlanilha("Fase", t.follow));
+  trocarHTML($("c-diligencia"), tabelaPlanilha("Diligência", t.diligencia));
+}
+
+/* ======================= início ======================= */
+function iniciar() {
+  aplicarTema(store.get("bap_tema") || "midnight");
+  QS("#segTema [data-tema]").forEach(b => b.onclick = () => { aplicarTema(b.dataset.tema); destruirGraficos(); renderAba(); });
+  QS("#segAgora [data-agora]").forEach(b => b.onclick = () => { S.agora = b.dataset.agora; if (construirFiltros()) {} render(); });
+  document.addEventListener("click", ev => {
+    const c = ev.target.closest("[data-g]"); if (c) return alternar(c.dataset.g, c.dataset.v);
+    const r = ev.target.closest("[data-rm]");
+    if (r) { if (r.dataset.rm === "datas") { S.f.de = S.f.ate = null; } else S.f[r.dataset.rm] = S.f[r.dataset.rm].filter(v => v !== r.dataset.v); return render(); }
+    const a = ev.target.closest(".advl"); if (a) { abrirExtra(true); return alternar("adv", a.dataset.adv); }
+    const h = ev.target.closest("[data-h]"); if (h) { const el = $(h.dataset.h); el.classList.toggle("on"); h.classList.toggle("on", el.classList.contains("on")); return; }
+    const o = ev.target.closest("[data-ordreg]");
+    if (o) { const c2 = o.dataset.ordreg; ORD_REG = ORD_REG.col === c2 ? {col: c2, desc: !ORD_REG.desc} : {col: c2, desc: c2 !== "uf"}; return renderRegiao(S.R); }
+  });
+  document.addEventListener("keydown", ev => { const a = ev.target.closest && ev.target.closest(".advl");
+    if (a && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); abrirExtra(true); alternar("adv", a.dataset.adv); } });
+  QS("[data-atalho]").forEach(b => b.onclick = () => {
+    const t = b.dataset.atalho;
+    [S.f.de, S.f.ate] = t === "vencidos" ? [null, addDias(HOJE, -1)] : t === "hoje" ? [HOJE, HOJE] : t === "prox7" ? [HOJE, addDias(HOJE, 7)]
+      : [HOJE.slice(0, 8) + "01", addDias(addDias(HOJE.slice(0, 8) + "01", 32).slice(0, 8) + "01", -1)];
+    render(); });
+  $("fDe").onchange = () => { S.f.de = $("fDe").value || null; render(); };
+  $("fAte").onchange = () => { S.f.ate = $("fAte").value || null; render(); };
+  $("maisFiltros").onclick = () => abrirExtra($("extra").classList.contains("oculto"));
+  $("limpar").onclick = () => { S.f = {uf: [], carteira: [], adv: [], etapa: [], produto: [], de: null, ate: null}; render(); };
+  QS("[data-aba]").forEach(b => b.onclick = () => aplicarAba(b.dataset.aba));
+  QS("#segOrdAdv [data-ord]").forEach(b => b.onclick = () => { S.ordAdv = b.dataset.ord; QS("#segOrdAdv button").forEach(x => x.classList.toggle("on", x === b)); renderAdvogados(S.R); });
+  QS("#segVistaAdv [data-vista]").forEach(b => b.onclick = () => { S.vistaAdv = b.dataset.vista; QS("#segVistaAdv button").forEach(x => x.classList.toggle("on", x === b)); renderAdvogados(S.R); });
+  QS("#segCE [data-ce]").forEach(b => b.onclick = () => { S.ce = b.dataset.ce; QS("#segCE button").forEach(x => x.classList.toggle("on", x === b)); renderCE(S.R); });
+  if (typeof iniciarExportacao === "function") iniciarExportacao();
+  construirFiltros();
+  const m = /aba=(oper|gest|planilha)/.exec(location.search + location.hash);
+  S.R = A.tudo(D, S.agora, S.f); renderTopo(); renderAtivos();
+  aplicarAba(m ? m[1] : (store.get("bap_aba") || "oper"));
+}
+iniciar();
 </script>
 </body>
 </html>

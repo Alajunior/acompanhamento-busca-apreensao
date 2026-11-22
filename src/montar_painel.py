@@ -22,6 +22,7 @@ from src.regra import COLUNAS, EXTINTAS, ORDEM_ACAO, ORDEM_FOLLOW, ORDEM_PROCESS
 
 RAIZ = Path(__file__).resolve().parent.parent
 MODELO = RAIZ / "src" / "painel.html"
+MAPA = RAIZ / "docs" / "vendor" / "br_uf.json"
 SCRIPTS = {"/*__AGREGAR__*/": RAIZ / "src" / "agregar.js", "/*__EXPORTAR__*/": RAIZ / "src" / "exportar.js"}
 DINAMICAS_BD = ("TIPO_AGENDAMENTO", "DATA_AGENDAMENTO", "FASE", "DATA_INSERT")
 _ATRIBUTOS = {"uf": ("UF", None), "carteira": ("CARTEIRA_PRODUTO", "(vazio)"), "adv": ("ADVOGADO_OPERACIONAL", "(sem advogado)"),
@@ -101,6 +102,8 @@ def _json(x) -> str:
 
 def montar_html(payload: dict, saida: Path) -> None:
     html = MODELO.read_text(encoding="utf-8").replace("/*__DADOS__*/", "const DADOS = " + _json(payload) + ";")
+    mapa = json.loads(MAPA.read_text(encoding="utf-8"))   # embutido: o mapa funciona também abrindo o arquivo local
+    html = html.replace("/*__MAPA__*/", "const MAPA_UF = " + _json(mapa) + ";")
     for marca, arq in SCRIPTS.items():
         html = html.replace(marca, arq.read_text(encoding="utf-8").replace("</", r"<\/") if arq.exists() else "")
     saida.parent.mkdir(parents=True, exist_ok=True)

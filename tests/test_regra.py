@@ -118,11 +118,6 @@ def test_pastas_com_empate():
     assert pastas_com_empate(ag) == {"A"}
 
 
-@pytest.fixture(scope="module")
-def sim():
-    return simular(42)
-
-
 def test_acaso_diverge_so_nos_empates(sim):
     q = HOJE + pd.Timedelta(hours=9, minutes=4)
     ag = agenda_em(sim, q)

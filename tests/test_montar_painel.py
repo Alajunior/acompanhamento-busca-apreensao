@@ -9,16 +9,6 @@ from src.publicacao import linha_do_tempo
 from src.regra import COLUNAS, TIPOS, chave
 
 
-@pytest.fixture(scope="module")
-def linha():
-    return linha_do_tempo(simular(42))
-
-
-@pytest.fixture(scope="module")
-def payload(linha):
-    return montar_payload(linha)
-
-
 def decodificar_foto(pl: dict, k: int) -> set[tuple]:
     estado: dict[int, tuple] = {}
     for j in range(k + 1):
@@ -86,3 +76,17 @@ def test_bd_recompoe_as_62_colunas(tmp_path, linha, payload):
     bd = json.loads((tmp_path / "bd.json").read_text("utf-8"))
     assert set(bd["colunas"]) | set(DINAMICAS_BD) == set(COLUNAS) and len(bd["colunas"]) + len(DINAMICAS_BD) == 62
     assert len(bd["valores"]) == len(bd["pastas"]) > 4000
+
+
+def test_html_tem_abas_filtros_e_agora(tmp_path, payload):
+    montar_html(payload, tmp_path / "i.html")
+    html = (tmp_path / "i.html").read_text("utf-8")
+    for aba in ("oper", "gest", "planilha"):
+        assert f'data-aba="{aba}"' in html
+    for h in ("07:05", "09:05", "11:05", "13:05", "15:05", "17:05"):
+        assert f'data-agora="{h}"' in html
+    for f in ("fUF", "fCarteira", "fDe", "fAte", "fAdv", "fEtapa", "fProduto"):
+        assert f'id="{f}"' in html
+    for t in ("midnight", "dark", "light"):
+        assert f'data-tema="{t}"' in html
+    assert 'src="vendor/chart.umd.min.js"' in html and "Agregar" in html

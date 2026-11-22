@@ -10,11 +10,6 @@ def _chave(x: str) -> str:
     return re.sub(r"\s+", "", str(x)).upper()
 
 
-@pytest.fixture(scope="session")
-def sim():
-    return simular(42)
-
-
 def share_primeiro_mandado(sim) -> float:
     ap = sim.pastas.dropna(subset=["dia_apreensao"])
     return (ap["tentativa_apreensao"] == 1).mean()
