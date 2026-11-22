@@ -76,6 +76,7 @@ def test_bd_recompoe_as_62_colunas(tmp_path, linha, payload):
     bd = json.loads((tmp_path / "bd.json").read_text("utf-8"))
     assert set(bd["colunas"]) | set(DINAMICAS_BD) == set(COLUNAS) and len(bd["colunas"]) + len(DINAMICAS_BD) == 62
     assert len(bd["valores"]) == len(bd["pastas"]) > 4000
+    assert bd["todas"] == list(COLUNAS)
 
 
 def test_html_tem_abas_filtros_e_agora(tmp_path, payload):

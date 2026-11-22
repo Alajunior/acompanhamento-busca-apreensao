@@ -562,9 +562,10 @@ function renderPrazos(R) {
     options: {indexAxis: "y", scales: {x: {stacked: true}, y: {stacked: true}}, plugins: {legend: {position: "bottom", labels: {boxWidth: 12, usePointStyle: true}}}}});
 }
 const ORD_ADV = {processos: x => x.processos, vencidos: x => x.vencidos, pct_venc: x => x.pct_venc ?? -1, risco: x => x.risco, hoje: x => x.hoje};
+const ordenarAdv = linhas => [...linhas].sort((x, y) => ((x.adv === "(sem advogado)") - (y.adv === "(sem advogado)")) || (ORD_ADV[S.ordAdv](y) - ORD_ADV[S.ordAdv](x)) || (y.processos - x.processos) || (x.adv < y.adv ? -1 : 1));
 function renderAdvogados(R) {
   const a = R.advogados, el = $("c-adv");
-  const lin = [...a.linhas].sort((x, y) => ((x.adv === "(sem advogado)") - (y.adv === "(sem advogado)")) || (ORD_ADV[S.ordAdv](y) - ORD_ADV[S.ordAdv](x)) || (y.processos - x.processos) || (x.adv < y.adv ? -1 : 1));
+  const lin = ordenarAdv(a.linhas);
   const vazio = !lin.length;
   mostrar("b-disp", !vazio && S.vistaAdv === "disp"); mostrar(el, vazio || S.vistaAdv === "barras");
   if (vazio) { trocarHTML(el, VAZIO()); $("leg-adv").innerHTML = ""; $("regra-adv").innerHTML = ""; return; }
@@ -838,6 +839,37 @@ function renderPlanilha(R) {
   trocarHTML($("c-produtivos"), tabelaPlanilha("Agendamento", t.produtivos));
   trocarHTML($("c-follow"), tabelaPlanilha("Fase", t.follow));
   trocarHTML($("c-diligencia"), tabelaPlanilha("Diligência", t.diligencia));
+}
+
+/* ======================= exportação ======================= */
+let BD;   // undefined = ainda não carregado; null = indisponível (arquivo aberto sem servidor)
+async function carregarBD() {
+  if (BD !== undefined) return BD;
+  try { const r = await fetch(D.fontes_bd); BD = r.ok ? await r.json() : null; } catch (e) { BD = null; }
+  return BD;
+}
+function baixar(nome, conteudo, tipo) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([conteudo], {type: tipo})); a.download = nome;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+function iniciarExportacao() {
+  document.addEventListener("click", ev => {
+    const b = ev.target.closest("[data-csv]"); if (!b) return;
+    const R = Object.assign({}, S.R, {advogados: Object.assign({}, S.R.advogados, {linhas: ordenarAdv(S.R.advogados.linhas)})});   // na ordem da tela
+    const out = Exportar.csvDoCard(b.dataset.csv, R, HOJE);
+    baixar(out.nome, out.texto, "text/csv;charset=utf-8");
+  });
+  $("exportar").onclick = async () => {
+    const bt = $("exportar"); bt.disabled = true; bt.textContent = "Gerando…";
+    try {
+      const pub = pubAtual(), foto = D.fotos[pub.foto];
+      const rows = A.filtrar(A.linhas(D, pub.foto), S.f, D);
+      const abas = Exportar.planilhas(S.R, rows, await carregarBD(), S.f, pub, foto, HOJE);
+      const wb = XLSX.utils.book_new();
+      for (const [nome, linhas] of Object.entries(abas)) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(linhas), nome);
+      XLSX.writeFile(wb, `acompanhamento_bap_${foto.dia.replace(/-/g, "")}_${pub.quando.replace(":", "")}.xlsx`);
+    } finally { bt.disabled = false; bt.textContent = "Exportar Excel"; }
+  };
 }
 
 /* ======================= início ======================= */

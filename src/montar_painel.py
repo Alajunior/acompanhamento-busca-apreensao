@@ -101,6 +101,7 @@ def _json(x) -> str:
 
 
 def montar_html(payload: dict, saida: Path) -> None:
+    payload = {k: v for k, v in payload.items() if not k.startswith("_")}   # caches internos (ex.: referencia) não vão para a página
     html = MODELO.read_text(encoding="utf-8").replace("/*__DADOS__*/", "const DADOS = " + _json(payload) + ";")
     mapa = json.loads(MAPA.read_text(encoding="utf-8"))   # embutido: o mapa funciona também abrindo o arquivo local
     html = html.replace("/*__MAPA__*/", "const MAPA_UF = " + _json(mapa) + ";")
@@ -132,7 +133,7 @@ def montar_bd(linha: LinhaDoTempo, payload: dict, saida: Path) -> None:
     df = pd.concat(partes, ignore_index=True).sort_values("_ordem").drop_duplicates("PASTA", keep="last")
     idx = {k: i for i, k in enumerate(payload["pastas"]["pasta"])}
     colunas = [c for c in COLUNAS if c not in DINAMICAS_BD]
-    bd = {"colunas": colunas, "pastas": [idx[chave(p)] for p in df["PASTA"]],
+    bd = {"colunas": colunas, "todas": list(COLUNAS), "pastas": [idx[chave(p)] for p in df["PASTA"]],
           "valores": [[_valor_bd(v) for v in linha_] for linha_ in df[colunas].itertuples(index=False, name=None)]}
     saida.write_text(json.dumps(bd, ensure_ascii=False, allow_nan=False, separators=(",", ":")), encoding="utf-8")
 

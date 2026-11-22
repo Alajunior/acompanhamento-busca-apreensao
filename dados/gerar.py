@@ -185,12 +185,19 @@ def simular(seed: int = 42) -> Simulacao:
                 fim = dia_saida + pd.Timedelta(days=float(rng.uniform(1, 3)))   # a última fica aberta junto do BAIXADO
                 if tipo == "EMENDA REALIZADA":
                     fim = min(fim, DIA_EXTINCAO + pd.Timedelta(hours=8)) if ini < DIA_EXTINCAO else fim
-            dur = (fim - ini) / pd.Timedelta(days=1)
-            prazo = ini + pd.Timedelta(days=max(dur, 1.0) * float(rng.uniform(0.2, 1.4)))
-            prazo = prazo.normalize() + pd.Timedelta(minutes=int(rng.integers(8 * 60, 24 * 60)))
-            tipo_txt = tipo.lower() + " " if rng.random() < 0.01 else tipo
-            id_agenda += 1
-            linhas.append((id_agenda, chave_txt, tipo_txt, prazo, ini, fim, pasta))
+            # etapa longa = cadeia de tarefas do mesmo tipo: o escritório reagenda, cada tarefa com um prazo novo
+            c_ini, primeira = ini, None
+            while c_ini < fim:
+                c_fim = min(fim, c_ini + pd.Timedelta(days=float(rng.uniform(25, 60))))
+                dur = (c_fim - c_ini) / pd.Timedelta(days=1)
+                prazo = c_ini + pd.Timedelta(days=max(dur, 1.0) * float(rng.uniform(0.2, 1.4)))
+                prazo = prazo.normalize() + pd.Timedelta(minutes=int(rng.integers(8 * 60, 24 * 60)))
+                tipo_txt = tipo.lower() + " " if rng.random() < 0.01 else tipo
+                id_agenda += 1
+                linhas.append((id_agenda, chave_txt, tipo_txt, prazo, c_ini, c_fim, pasta))
+                primeira = primeira or prazo
+                c_ini = c_fim
+            prazo = primeira
             if tipo in ("EMENDAR INICIAL", "AGUARDANDO LIMINAR") and rng.random() < 0.35:
                 outro = "AGUARDANDO LIMINAR" if (tipo == "EMENDAR INICIAL") == (rng.random() < 0.87) else "EMENDAR INICIAL"
                 if outro == tipo:
@@ -201,7 +208,7 @@ def simular(seed: int = 42) -> Simulacao:
             if rng.random() < 0.5:
                 id_agenda += 1
                 linhas.append((id_agenda, chave_txt, str(rng.choice(TIPOS_AUX)), prazo + pd.Timedelta(days=int(rng.integers(-5, 10))),
-                               ini, fim, pasta))
+                               ini, min(fim, ini + pd.Timedelta(days=float(rng.uniform(10, 45)))), pasta))
         if pd.notna(dia_saida):
             id_agenda += 1
             linhas.append((id_agenda, chave_txt, "BAIXADO", dia_saida.normalize() + pd.Timedelta(hours=18),
