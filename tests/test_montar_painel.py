@@ -179,8 +179,17 @@ def test_tres_tabelas_na_operacao(html_gerado):
 
 
 def test_index_html_nao_inclui_ba(html_gerado):
-    assert "localizadores_info" not in html_gerado     # o ba.json só é baixado ao abrir a aba
+    assert "base_minutos\":" not in html_gerado and "\"colunas_passagem\"" not in html_gerado   # o ba.json só é baixado ao abrir a aba
 
 
 def test_ba_js_embutido(html_gerado):
     assert "linhaTempo" in html_gerado and "/*__BA__*/" not in html_gerado
+
+
+def test_aba_ba_marcacao(html_gerado):
+    for i in ("ba-frescor", "ba-aviso", "ba-segmentacoes", "ba-indice", "ba-gaveta", *[f"ba-sec-{s}" for s in (
+            "localizados", "visao-localizados", "mandados", "apreendidos", "visao-apreendidos", "comp-analista", "meta-banco",
+            "meta-relogio", "meta-analista", "meta-relogio-analista", "localizador", "linha-tempo")]):
+        assert f'id="{i}"' in html_gerado, i
+    assert "VLR PERFORMANCE" in html_gerado and "PERFORMACE" not in html_gerado
+    assert "dados do sistema jurídico de" in html_gerado

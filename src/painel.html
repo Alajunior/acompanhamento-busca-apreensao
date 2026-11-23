@@ -267,6 +267,108 @@ body[data-theme="light"] .tile{background:#fff}
 @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi .v{font-size:18px}.tabs button{padding:9px 14px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 body.estatico *,body.estatico *::before,body.estatico *::after{animation:none!important;transition:none!important}
+/* ---------- Busca e Apreensão: modo Planilha (visual do Excel) ---------- */
+.planilha,.pl-segs,.ba-gaveta{--pl-cab:#0070C0;--pl-piv:#4472C4;--pl-sel:color-mix(in srgb,#4472C4 55%,transparent);--pl-subt:color-mix(in srgb,#4472C4 22%,transparent);
+  --pl-grade:var(--bd);--pl-neg:var(--neg);--pl-pos:var(--pos);--pl-fut:color-mix(in srgb,var(--text) 7%,transparent)}
+body[data-theme="light"] .planilha,body[data-theme="light"] .pl-segs,body[data-theme="light"] .ba-gaveta{--pl-sel:#B4C6E7;--pl-subt:#DBE7F5;--pl-grade:#d9d9d9;--pl-neg:#C00000;--pl-pos:#00B050;--pl-fut:#f2f2f2}
+.pl-segs{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 6px}
+.pl-seg{width:190px;border:1px solid var(--pl-grade);border-radius:6px;background:var(--inp);box-shadow:0 1px 3px rgba(0,0,0,.12);display:flex;flex-direction:column}
+.pl-seg.larga{width:320px}
+.pl-seg header{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;font:700 12px/1.2 inherit;border-bottom:1px solid var(--pl-grade)}
+.pl-seg header button{all:unset;cursor:pointer;width:22px;height:22px;display:grid;place-items:center;border-radius:4px;color:var(--neg);font-weight:700}
+.pl-seg header button:disabled{opacity:.4;cursor:default}
+.pl-seg header button:focus-visible{outline:2px solid var(--ac)}
+.pl-itens{max-height:172px;overflow:auto;padding:5px;display:grid;gap:4px}
+.pl-itens.g2{grid-template-columns:1fr 1fr}.pl-itens.g3{grid-template-columns:1fr 1fr 1fr}
+.pl-itens button{all:unset;cursor:pointer;font-size:12px;padding:4px 6px;border:1px solid var(--pl-grade);border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:18px}
+.pl-itens button.on{background:var(--pl-sel);font-weight:600}
+body[data-theme="light"] .pl-itens button.on{color:#000}
+.pl-itens button:focus-visible{outline:2px solid var(--ac)}
+.planilha{display:grid;grid-template-columns:190px 1fr;gap:14px;margin-top:14px;align-items:start}
+.pl-indice{position:sticky;top:70px;max-height:calc(100vh - 80px);overflow:auto;border:1px solid var(--pl-grade);border-radius:6px;padding:8px;background:var(--glass);backdrop-filter:blur(6px)}
+.pl-indice b{display:block;font-size:11px;letter-spacing:.12em;color:var(--t2);margin:0 0 6px 4px}
+.pl-indice button{all:unset;display:block;width:calc(100% - 14px);cursor:pointer;font-size:12px;padding:5px 7px;border-left:3px solid transparent;border-radius:2px}
+.pl-indice button.on{border-left-color:var(--pl-piv);background:var(--pl-sel);font-weight:700}
+.pl-indice button:focus-visible{outline:2px solid var(--ac)}
+.pl-secoes{display:flex;flex-direction:column;gap:14px;min-width:0}
+.pl-sec{border:1px solid var(--pl-grade);border-radius:4px;padding:10px 12px;scroll-margin-top:70px;background:var(--glass);min-width:0}
+.pl-sec h3{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.pl-subtit{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);margin:12px 0 4px;display:flex;align-items:center;gap:8px}
+.pl-nota{font-size:12px;color:var(--t2);margin:0 0 6px}.pl-nota-pe{font-size:12px;color:var(--t2);margin:8px 0 0}
+.pl-aviso{background:#FFF2CC;border:1px solid #FFD966;color:#7f6000;padding:5px 8px;border-radius:4px;font-size:12px;margin:0 0 6px}
+.pl-vazio{font-style:italic;color:var(--t2);font-size:12px}
+.pl-barra{display:flex;align-items:center;gap:8px;margin:0 0 6px;flex-wrap:wrap}
+.pl-barra .sp{flex:1}
+.pl-barra input{background:var(--inp);color:var(--text);border:1px solid var(--pl-grade);border-radius:4px;padding:5px 8px;font:12px inherit;width:min(320px,100%)}
+.pl-rolo{overflow:auto;max-width:100%}
+.pl-rolo.alta{max-height:560px}
+.pl-t{border-collapse:collapse;font:12px/1.25 Calibri,"Segoe UI",sans-serif;width:max-content;min-width:100%}
+.pl-t th,.pl-t td{border:1px solid var(--pl-grade);padding:3px 7px;white-space:nowrap;text-align:left}
+.pl-t td.n,.pl-t th.n{text-align:right;font-variant-numeric:tabular-nums}
+.pl-t thead th{background:var(--pl-cab);color:#fff;font-weight:700;position:sticky;top:0;z-index:1}
+.pl-t.piv thead th{background:var(--pl-piv)}
+.pl-t thead tr.n2 th{background:var(--pl-sel);color:var(--text)}
+body[data-theme="light"] .pl-t thead tr.n2 th{color:#000}
+.pl-t th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.pl-t th button:focus-visible{outline:2px solid #fff}
+.pl-t th .seta{opacity:.75;font-size:10px}
+.pl-t tr.sub td{background:var(--pl-subt);font-weight:700}
+.pl-t tr.tot td{background:var(--pl-piv);color:#fff;font-weight:700}
+.pl-t tr.bloco td{background:var(--pl-piv);color:#fff;font-weight:700}
+.pl-t td.neg{color:var(--pl-neg)}.pl-t td.pos{color:var(--pl-pos)}
+.pl-t tr.tot td.neg{color:#fff}
+.pl-t td.fut,.pl-t th.fut{background:var(--pl-fut)}
+.pl-t tbody tr[data-pasta]{cursor:pointer}
+.pl-t tbody tr[data-pasta]:hover td,.pl-t tbody tr[data-pasta].sel td{background:var(--hover)}
+.pl-t td.obs{max-width:340px;overflow:hidden;text-overflow:ellipsis}
+.pl-t td.cinza{color:var(--t2)}
+.pl-t .rot{color:var(--t2);font-weight:400;margin-left:6px}
+.selo-est{border:1px dashed var(--t2);border-radius:3px;font-size:10px;padding:0 4px;margin-left:5px;color:var(--t2)}
+.pl-pag{display:flex;gap:8px;align-items:center;justify-content:flex-end;font-size:12px;margin-top:6px}
+.pl-pag button{all:unset;cursor:pointer;padding:2px 9px;border:1px solid var(--pl-grade);border-radius:4px}
+.pl-pag button:disabled{opacity:.35;cursor:default}
+/* linha do tempo */
+.lt-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px;font-size:12px}
+.lt-ctl select{background:var(--inp);color:var(--text);border:1px solid var(--pl-grade);border-radius:4px;padding:4px 6px}
+.lt-leg{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--t2);margin:4px 0 8px}
+.lt-leg i{display:inline-block;width:16px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.lt-eixo,.lt-linha{display:grid;grid-template-columns:250px 1fr;align-items:center}
+.lt-eixo{position:sticky;top:64px;background:var(--sticky);z-index:2;font-size:10px;color:var(--t2);border-bottom:1px solid var(--pl-grade);height:26px}
+.lt-trilha{position:relative;height:22px;overflow:hidden}
+.lt-eixo .lt-trilha{height:26px}
+.lt-tick{position:absolute;top:2px;transform:translateX(-50%);white-space:nowrap}
+.lt-tick.m{font-weight:700;color:var(--text)}
+.lt-vl{position:absolute;top:0;bottom:0;border-left:1px dotted var(--pl-grade)}.lt-vl.m{border-left-style:solid}
+.lt-grupo{all:unset;display:block;width:100%;cursor:pointer;font-size:12px;font-weight:700;padding:6px 4px;border-bottom:1px solid var(--pl-grade)}
+.lt-grupo:focus-visible{outline:2px solid var(--ac)}
+.lt-linha{font-size:11px;border-bottom:1px solid color-mix(in srgb,var(--pl-grade) 50%,transparent);cursor:pointer}
+.lt-linha:hover,.lt-linha.sel{background:var(--hover)}
+.lt-linha:focus-visible{outline:2px solid var(--ac)}
+.lt-rot{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding-right:6px}
+.lt-rot b{font-variant-numeric:tabular-nums;margin-right:6px}
+.lt-seg{position:absolute;top:5px;height:12px;border-radius:2px}
+.lt-seg.cortado{box-shadow:inset 6px 0 4px -3px rgba(0,0,0,.6)}
+.lt-ponto{position:absolute;top:6px;width:10px;height:10px;border-radius:50%;transform:translateX(-50%)}
+.lt-txt{position:absolute;top:4px;font-size:10px;white-space:nowrap;color:var(--t2)}
+.lt-txt.dentro{color:#fff;font-weight:600}
+.lt-mais{all:unset;cursor:pointer;font-size:12px;color:var(--ac);padding:6px 4px}
+/* gaveta da pasta */
+.ba-gaveta{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--sticky);border-left:1px solid var(--bd);z-index:50;overflow:auto;padding:16px 18px;box-shadow:-12px 0 30px rgba(0,0,0,.35)}
+.ba-gaveta h3{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.ba-gaveta h3 button{margin-left:auto}
+.ba-gaveta dl{display:grid;grid-template-columns:170px 1fr;gap:4px 10px;font-size:12px;margin:0 0 12px}
+.ba-gaveta dt{color:var(--t2)}.ba-gaveta dd{margin:0}
+.ba-gaveta .caixa{border-radius:6px;padding:7px 9px;font-size:12px;margin:6px 0}
+.ba-gaveta .caixa.ok{background:color-mix(in srgb,var(--pos) 16%,transparent)}
+.ba-gaveta .caixa.nao{background:color-mix(in srgb,var(--text) 8%,transparent)}
+.gv-lt{list-style:none;margin:0;padding:0 0 0 14px;border-left:2px solid var(--pl-grade)}
+.gv-lt li{position:relative;margin:0 0 9px;font-size:12px}
+.gv-lt li i{position:absolute;left:-21px;top:3px;width:10px;height:10px;border-radius:50%}
+.gv-lt small{color:var(--t2);display:block}
+.gv-memo{white-space:pre-wrap;font-size:12px;background:var(--inp);border:1px solid var(--pl-grade);border-radius:4px;padding:8px}
+@media (max-width:900px){.planilha{grid-template-columns:1fr}.pl-indice{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:4px}
+  .pl-indice b{width:100%}.pl-indice button{width:auto;border-left:0;border-bottom:3px solid transparent}.pl-indice button.on{border-bottom-color:var(--pl-piv)}}
+@media (max-width:700px){.lt-eixo,.lt-linha{grid-template-columns:120px 1fr}.lt-rot span{display:none}.pl-seg,.pl-seg.larga{width:100%}}
 </style>
 </head>
 <body data-theme="midnight">
@@ -412,7 +514,34 @@ body.estatico *,body.estatico *::before,body.estatico *::after{animation:none!im
 
 <!-- =================== Busca e Apreensão (modo planilha) =================== -->
 <section id="v-planilha" class="oculto">
-  <div id="ba-raiz"></div>
+  <div id="ba-raiz">
+  <div class="glass ba-topo">
+    <div class="ctitle">Busca e Apreensão — a planilha do jurídico<button class="hbtn" data-h="h-ba">ⓘ</button></div>
+    <p class="desc">Planilha: as abas do arquivo do jurídico, com segmentações como no Excel. Pastas com localização do veículo ou apreensão desde janeiro.</p>
+    <div class="help" id="h-ba"><b>Como ler:</b> cada pasta está em uma etapa: <b>Apreendido</b>, <b>Mandado expedido</b> (veículo localizado e mandado aguardando o oficial), <b>Localizado (diligência)</b> ou <b>Localização encerrada sem apreensão</b>. A apreensão conta no dia útil em que foi registrada (registro a partir das 19h vai para o dia seguinte). As segmentações valem para as seções em que valem na planilha original: o MÊS não muda LOCALIZADOS, MANDADOS nem a linha do tempo; a ETAPA não muda os resumos de apreensão nem as metas. O valor de performance é estimado (avaliação do bem ou 55% da tabela FIPE).</div>
+    <div id="ba-segmentacoes" class="pl-segs"></div>
+    <p class="muted" id="ba-frescor"></p>
+    <div class="trac oculto" id="ba-aviso" role="status"></div>
+  </div>
+  <div class="planilha" id="ba-planilha">
+    <nav class="pl-indice" id="ba-indice" aria-label="Índice da planilha"></nav>
+    <div class="pl-secoes">
+      <section class="pl-sec" id="ba-sec-localizados"><h3>LOCALIZADOS</h3><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-visao-localizados"><h3>VISÃO LOCALIZADOS</h3><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-mandados"><h3>MANDADOS</h3><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-apreendidos"><h3>APREENDIDOS</h3><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-visao-apreendidos"><h3>VISÃO APREENDIDOS</h3><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-comp-analista"><h3>COMP. ANALISTA<button class="hbtn" data-h="h-ba-comp">ⓘ</button></h3><div class="help" id="h-ba-comp"><b>Como ler:</b> apreensões por analista e mês, contando em cada mês só até o mesmo dia útil de hoje: se hoje é o 17º dia útil, cada mês mostra as apreensões dos seus 17 primeiros dias úteis. Assim o mês corrente se compara com os anteriores no mesmo ponto do calendário.</div><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-meta-banco"><h3>META BANCO<button class="hbtn" data-h="h-ba-meta">ⓘ</button></h3><div class="help" id="h-ba-meta"><b>Como ler:</b> meta do mês por faixa de atraso, o realizado até agora, quanto falta (negativo, em vermelho, é o que ainda falta), quanto falta por dia útil restante e a projeção do mês no ritmo atual (realizado ÷ dias úteis passados × dias úteis restantes). Os arredondamentos seguem os da planilha.</div><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-meta-relogio"><h3>META RELÓGIO<button class="hbtn" data-h="h-ba-rel">ⓘ</button></h3><div class="help" id="h-ba-rel"><b>Como ler:</b> uma coluna por dia útil do mês. NECESSIDADE DIA compara o realizado acumulado com a meta acumulada (verde: à frente; vermelho: atrás). NECESSIDADE ATUAL é quanto seria preciso apreender no dia para voltar à meta. As duas linhas sem rótulo são a necessidade por dia e a acumulada, como na planilha original. Colunas cinza: dias úteis que ainda não chegaram.</div><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-meta-analista"><h3>META ANALISTA</h3><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-meta-relogio-analista"><h3>META RELÓGIO ANALISTA</h3><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-localizador"><h3>LOCALIZADOR<button class="hbtn" data-h="h-ba-loc">ⓘ</button></h3><div class="help" id="h-ba-loc"><b>Como ler:</b> o nome do localizador é digitado livremente pelos advogados; o painel junta as grafias pelo telefone ("(FINAL dddd)" separa xarás). Uma passagem é o período em que a ficha da pasta ficou com o localizador; ele "localizou" se a localização aconteceu nesse período.</div><div class="pl-corpo"></div></section>
+      <section class="pl-sec" id="ba-sec-linha-tempo"><h3>LINHA DO TEMPO<button class="hbtn" data-h="h-ba-lt">ⓘ</button></h3><div class="help" id="h-ba-lt"><b>Como ler:</b> cada pasta é uma linha no calendário; cada etapa vai do seu marco até o marco seguinte e, numa pasta em aberto, a última vai até hoje. "Parado há N dias" = dias corridos desde o último marco. Agrupe por analista, UF, fase, mês da localização ou localizador para ver onde as pastas ficam paradas.</div><div class="pl-corpo"></div></section>
+    </div>
+  </div>
+  <aside class="ba-gaveta oculto" id="ba-gaveta" aria-label="Detalhe da pasta"></aside>
+  </div>
 </section>
 
 <!-- =================== Padrões de placa =================== -->
@@ -601,6 +730,8 @@ function aplicarAba(a) {
   S.aba = a; store.set("bap_aba", a);
   QS("[data-aba]").forEach(b => { b.classList.toggle("on", b.dataset.aba === a); b.setAttribute("aria-selected", b.dataset.aba === a); });
   for (const v of ["oper", "gest", "padroes", "planilha"]) { const el = $("v-" + v); mostrar(el, v === a); if (v === a && !RM) { el.classList.remove("entra"); void el.offsetWidth; el.classList.add("entra"); } }
+  mostrar(document.querySelector(".cmdbar"), a !== "planilha"); mostrar("exportar", a !== "planilha");   // a aba tem segmentações próprias
+  if (a !== "planilha") mostrar("ba-gaveta", false);
   renderAba(); for (const k in graf) graf[k].resize();
 }
 function renderAba() {
@@ -981,7 +1112,436 @@ function tabelaPlanilha(rotulo, linhas) {
   return `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>${rotulo}</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${linhas.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${int(v)}</td><td>${p2(v / tot * 100)}</td></tr>`).join("")}
     <tr class="tot"><td>Total Geral</td><td>${int(tot)}</td><td>100,00%</td></tr></tbody></table></div>`;
 }
-function renderPlanilha(R) {}   // aba Busca e Apreensão: preenchida pela Planilha (ba.js)
+/* ======================= Busca e Apreensão (modo Planilha) ======================= */
+let BAD, BAD_CARGA;   // ba.json: undefined = ainda não carregado; null = indisponível
+function carregarBA() {
+  if (BAD !== undefined) return Promise.resolve(BAD);
+  BAD_CARGA = BAD_CARGA || fetch("ba.json").then(r => (r.ok ? r.json() : null)).catch(() => null).then(j => (BAD = j));
+  return BAD_CARGA;
+}
+const BUI = {tab: {}, dados: {}, sel: null, timer: null, ltCol: new Set(), ltMais: {}, obs: null,
+  grupo: store.get("bap_ba_grupo") || "advogado", janela: store.get("bap_ba_janela") || "90"};
+S.ba = (() => { try { const f = JSON.parse(store.get("bap_ba_filtros") || "{}"); return {adv: f.adv || [], fase: f.fase || [], uf: f.uf || [],
+  mes: f.mes || null, etapa: f.etapa || [], localizador: f.localizador || []}; } catch (e) { return {adv: [], fase: [], uf: [], mes: null, etapa: [], localizador: []}; } })();
+const SECOES_BA = [["localizados", "LOCALIZADOS"], ["visao-localizados", "VISÃO LOCALIZADOS"], ["mandados", "MANDADOS"], ["apreendidos", "APREENDIDOS"],
+  ["visao-apreendidos", "VISÃO APREENDIDOS"], ["comp-analista", "COMP. ANALISTA"], ["meta-banco", "META BANCO"], ["meta-relogio", "META RELÓGIO"],
+  ["meta-analista", "META ANALISTA"], ["meta-relogio-analista", "META RELÓGIO ANALISTA"], ["localizador", "LOCALIZADOR"], ["linha-tempo", "LINHA DO TEMPO"]];
+const COR_EV = ["#f5a623", "#8e7cc3", "#94a3b8", "#3b82f6", "#e5484d", "#2fa36b"];
+const NOME_EV = ["Localização", "Liminar", "Mandado requerido", "Mandado expedido", "Mandado negativo", "Apreensão"];
+const corpoBA = id => $("ba-sec-" + id).querySelector(".pl-corpo");
+const mesTxt = m => { const [mm, aa] = m.split("/"); return mm.padStart(2, "0") + "/" + aa; };
+const dCurta = s => s ? s.slice(8, 10) + "/" + s.slice(5, 7) + "/" + s.slice(2, 4) : "";
+const dLonga = s => s ? s.slice(8, 10) + "/" + s.slice(5, 7) + "/" + s.slice(0, 4) : "";
+function nomeMarco(m) {
+  const [e, n] = m; if (e < 2 || e === 5) return NOME_EV[e];
+  return `${n === 6 ? "6º ou +" : n + "º"} mandado ${["requerido", "expedido", "negativo"][e - 2]}`;
+}
+function fmtCel(v, tipo) {
+  if (v === null || v === undefined || v === "") return "";
+  if (tipo === "int") return fI.format(v);
+  if (tipo === "rs") return f2.format(v);
+  if (tipo === "d1") return f1.format(v);
+  if (tipo === "pct") return f1.format(v * 100) + "%";
+  if (tipo === "data") return dCurta(v);
+  if (tipo === "mes") return mesTxt(v);
+  return String(v);
+}
+function csvCel(v, tipo) {
+  if (v === null || v === undefined) return "";
+  if (tipo === "pct") return String(Math.round(v * 10000) / 100).replace(".", ",");
+  if (tipo === "data") return dLonga(v);
+  if (tipo === "mes") return mesTxt(v);
+  if (typeof v === "number") return String(v).replace(".", ",");
+  return String(v);
+}
+function baixarCSVBA(nome, cab, linhas) {
+  const q = s => (/[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s);
+  baixar(`busca_apreensao_${nome}_${HOJE}.csv`, "﻿" + [cab, ...linhas].map(l => l.map(x => q(String(x ?? ""))).join(";")).join("\r\n"), "text/csv;charset=utf-8");
+}
+
+/* ---------- tabela comum: lista (busca, páginas de 40, linha abre a pasta) ou pivô (subtotais e TOTAL) ---------- */
+function rotuloLinha(r, cols) {
+  return r.tipo === "total" ? "TOTAL" : r.tipo === "sub" ? `${r[cols[0].k] ?? ""} Total` : null;
+}
+function tabelaBA(id, cols, linhas, op = {}) {
+  const st = BUI.tab[id] || (BUI.tab[id] = {ord: null, busca: "", pag: 0});
+  const lista = op.tipo === "lista";
+  let rs = linhas;
+  if (lista && st.busca) {
+    const t = st.busca.trim().toUpperCase(), dig = t.replace(/[\s.\-/]/g, "");
+    rs = rs.filter(r => (/^\d+$/.test(dig) && String(r.PASTA).includes(dig)) || String(r.FINANCIADO || "").toUpperCase().includes(t));
+  }
+  if (st.ord) {
+    const {k, dir} = st.ord, tipo = (cols.find(c => c.k === k) || {}).tipo;
+    const cmp = (a, b) => {
+      const x = a[k], y = b[k], vx = x === null || x === undefined || x === "", vy = y === null || y === undefined || y === "";
+      if (vx || vy) return vx === vy ? 0 : vx ? 1 : -1;
+      const c = tipo === "mes" ? (x.split("/")[1] * 100 + +x.split("/")[0]) - (y.split("/")[1] * 100 + +y.split("/")[0])
+        : typeof x === "number" ? x - y : String(x).localeCompare(String(y), "pt-BR", {numeric: true});
+      return dir * c;
+    };
+    if (lista) rs = rs.map((r, i) => [r, i]).sort((a, b) => cmp(a[0], b[0]) || a[1] - b[1]).map(x => x[0]);
+    else {   // ordena dentro de cada grupo; o subtotal fecha o grupo e o TOTAL fica por último
+      const out = []; let grupo = [];
+      const fecha = () => { out.push(...grupo.map((r, i) => [r, i]).sort((a, b) => cmp(a[0], b[0]) || a[1] - b[1]).map(x => x[0])); grupo = []; };
+      for (const r of rs) { if (r.tipo === "sub" || r.tipo === "total") { fecha(); out.push(r); } else grupo.push(r); }
+      fecha(); rs = out;
+    }
+  }
+  BUI.dados[id] = {cols, linhas: rs, nome: op.csv || id};
+  if (!linhas.length) return `<div class="pl-vazio">sem dados para o filtro</div>`;
+  const porPag = 40, pags = lista ? Math.max(1, Math.ceil(rs.length / porPag)) : 1;
+  if (st.pag >= pags) st.pag = pags - 1;
+  const vis = lista ? rs.slice(st.pag * porPag, st.pag * porPag + porPag) : rs;
+  const seta = c => !st.ord || st.ord.k !== c.k ? "↕" : st.ord.dir > 0 ? "▲" : "▼";
+  const aria = c => !st.ord || st.ord.k !== c.k ? "none" : st.ord.dir > 0 ? "ascending" : "descending";
+  const cab = `<thead><tr>${cols.map(c => `<th class="${c.tipo && c.tipo !== "txt" && c.tipo !== "data" && c.tipo !== "mes" ? "n" : ""}" aria-sort="${aria(c)}"${c.dica ? ` title="${esc(c.dica)}"` : ""}><button data-plord="${id}|${c.k}">${esc(c.t)}<span class="seta">${seta(c)}</span></button></th>`).join("")}</tr></thead>`;
+  let ant = {};
+  const corpo = vis.map(r => {
+    const rot = rotuloLinha(r, cols), cls = r.tipo === "total" ? "tot" : r.tipo === "sub" ? "sub" : "";
+    let mudou = false;
+    const tds = cols.map((c, j) => {
+      let v = r[c.k], txt;
+      if (rot !== null && j === 0) txt = esc(rot);
+      else if (rot !== null && c.rep) txt = "";
+      else if (c.rep) { mudou = mudou || ant[c.k] !== v; txt = mudou ? esc(fmtCel(v, c.tipo)) : ""; }
+      else txt = c.html ? c.html(r) : esc(fmtCel(v, c.tipo));
+      const n = c.tipo && c.tipo !== "txt" && c.tipo !== "data" && c.tipo !== "mes";
+      const extra = (c.sinal && typeof v === "number" && v < 0 ? " neg" : "") + (c.cls ? " " + c.cls(r) : "");
+      return `<td class="${n ? "n" : ""}${extra}"${c.title ? ` title="${esc(c.title(r))}"` : ""}>${txt}</td>`;
+    }).join("");
+    if (rot !== null) ant = {}; else ant = Object.assign({}, r);
+    const at = lista ? ` data-pasta="${esc(r.PASTA)}" tabindex="0"${BUI.sel === r.PASTA ? ' class="sel"' : ""}` : (cls ? ` class="${cls}"` : "");
+    return `<tr${at}>${tds}</tr>`;
+  }).join("");
+  const busca = lista ? `<input type="search" placeholder="Buscar pasta ou financiado" aria-label="Buscar pasta ou financiado" data-plbusca="${id}" value="${esc(st.busca)}">` : "";
+  const barra = `<div class="pl-barra">${busca}<span class="sp"></span><button class="hbtn" data-plcsv="${id}" title="Baixar a tabela em CSV (todas as linhas)">CSV</button></div>`;
+  const pag = !lista ? "" : pags > 1
+    ? `<div class="pl-pag"><button data-plpag="${id}|-1"${st.pag === 0 ? " disabled" : ""} aria-label="página anterior">‹</button>${st.pag + 1} de ${pags} · ${fI.format(rs.length)} pastas<button data-plpag="${id}|1"${st.pag >= pags - 1 ? " disabled" : ""} aria-label="próxima página">›</button></div>`
+    : `<div class="pl-pag">${fI.format(rs.length)} ${rs.length === 1 ? "pasta" : "pastas"}</div>`;
+  const vazioBusca = lista && !rs.length ? `<div class="pl-vazio">nenhuma pasta para a busca</div>` : "";
+  return barra + `<div class="pl-rolo${!lista && rs.length > 40 ? " alta" : ""}"><table class="pl-t${lista ? "" : " piv"}">${cab}<tbody>${corpo}</tbody></table></div>` + vazioBusca + pag;
+}
+function csvTabelaBA(id) {
+  const d = BUI.dados[id]; if (!d) return;
+  if (d.matriz) return baixarCSVBA(d.nome, d.matriz[0], d.matriz.slice(1));
+  const ant = {};
+  baixarCSVBA("planilha_" + d.nome, d.cols.map(c => c.csv || c.t), d.linhas.map(r => {
+    const rot = rotuloLinha(r, d.cols);
+    return d.cols.map((c, j) => (rot !== null && j === 0 ? rot : rot !== null && c.rep ? "" : csvCel(r[c.k], c.tipo)));
+  }));
+}
+
+/* ---------- segmentações ---------- */
+function segmentacoesBA() {
+  const o = BAD.opcoes, info = o.localizadores_info || {};
+  const blocos = [["ANALISTA", "adv", o.advogados, ""], ["FASE", "fase", o.fases, ""], ["UF", "uf", o.ufs, "g3"], ["MÊS", "mes", o.meses, "g2"],
+    ["ETAPA", "etapa", o.etapas, ""], ["LOCALIZADOR", "localizador", o.localizadores, "larga"]];
+  trocarHTML($("ba-segmentacoes"), blocos.map(([t, k, ops, lay]) => {
+    const sel = k === "mes" ? (S.ba.mes ? [S.ba.mes] : []) : S.ba[k];
+    const itens = ops.map(v => {
+      const i = info[v], dica = k === "localizador" && i ? [v, i.telefones.length ? "tel. " + i.telefones.join(", ") : "", i.grafias > 1 ? `${i.grafias} grafias digitadas viraram este nome` : ""].filter(Boolean).join(" · ") : v;
+      return `<button data-plseg="${k}" data-v="${esc(v)}" class="${sel.includes(v) ? "on" : ""}" aria-pressed="${sel.includes(v)}" title="${esc(dica)}">${esc(k === "mes" ? mesTxt(v) : v)}</button>`;
+    }).join("") || `<span class="pl-vazio">Sem itens</span>`;
+    return `<div class="pl-seg${lay === "larga" ? " larga" : ""}"><header>${t}<button data-pllimpa="${k}" title="Limpar filtro de ${t}" aria-label="Limpar filtro de ${t}"${sel.length ? "" : " disabled"}>⨯</button></header><div class="pl-itens ${lay === "larga" ? "" : lay}">${itens}</div></div>`;
+  }).join(""));
+}
+function agendarBA() {
+  store.set("bap_ba_filtros", JSON.stringify(S.ba));
+  for (const k in BUI.tab) BUI.tab[k].pag = 0;
+  segmentacoesBA();
+  clearTimeout(BUI.timer); BUI.timer = setTimeout(desenharBA, 250);
+}
+
+/* ---------- seções ---------- */
+const C = (k, t, tipo = "txt", x = {}) => Object.assign({k, t, tipo}, x);
+const PIVO_ADV = q => [C("advogado", "ADVOGADO", "txt", {rep: true}), C("fase", "FASE"), C("valor_risco", "VLR DE RISCO", "rs"), C("valor_performance", "VLR PERFORMANCE", "rs"), C("qtd", q, "int")];
+const NOTA_ETAPA = `<p class="pl-nota-pe">A segmentação ETAPA não altera os resumos de apreensão e as metas: eles contam toda apreensão do período.</p>`;
+const subt = t => `<div class="pl-subtit">${t}</div>`;
+function tabelaMetaBA(id, rot1, m) {
+  if (!m.linhas.length) { BUI.dados[id] = null; return `<div class="pl-vazio">sem dados para o filtro</div>`; }
+  const g = [["META TOTAL", ["meta_qtd", "meta_valor", "tkt_meta"]], ["REALIZADO", ["real_qtd", "real_valor", "tkt_real"]], ["% ATINGIDO", ["pct_qtd", "pct_valor"]],
+    ["FALTA PARA META", ["falta_qtd", "falta_valor", "tkt_falta"]], ["FALTA POR DIA ÚTIL", ["falta_dia_qtd", "falta_dia_valor"]], ["PROJETADO", ["proj_qtd", "proj_valor", "proj_pct_qtd", "proj_pct_valor"]]];
+  const sub = k => ({meta_qtd: "QTD", meta_valor: "VALOR", tkt_meta: "TKT", real_qtd: "QTD", real_valor: "VALOR", tkt_real: "TKT", pct_qtd: "QTD", pct_valor: "VALOR",
+    falta_qtd: "QTD", falta_valor: "VALOR", tkt_falta: "TKT", falta_dia_qtd: "QTD", falta_dia_valor: "VALOR", proj_qtd: "QTD", proj_valor: "VALOR", proj_pct_qtd: "% QTD", proj_pct_valor: "% VALOR"})[k];
+  const tipo = k => (/pct/.test(k) ? "pct" : /qtd/.test(k) ? "int" : "rs");
+  const ks = g.flatMap(x => x[1]);
+  const linhas = m.linhas.map(l => [l.chave, ...ks.map(k => l[k])]);
+  BUI.dados[id] = {nome: "planilha_" + id, matriz: [[rot1, ...g.flatMap(([n, kk]) => kk.map(k => `${n} ${sub(k)}`))], ...m.linhas.map(l => [l.chave, ...ks.map(k => csvCel(l[k], tipo(k)))])]};
+  const cab = `<thead><tr><th></th>${g.map(([n, kk]) => `<th class="n" colspan="${kk.length}" style="text-align:center">${n}</th>`).join("")}</tr><tr class="n2"><th>${rot1}</th>${ks.map(k => `<th class="n">${sub(k)}</th>`).join("")}</tr></thead>`;
+  const corpo = m.linhas.map((l, i) => `<tr class="${l.tipo === "faixa" ? "sub" : l.tipo === "total" ? "tot" : ""}"><td>${esc(l.chave)}</td>${ks.map((k, j) => {
+    const v = linhas[i][j + 1];
+    return `<td class="n${/falta/.test(k) && typeof v === "number" && v < 0 ? " neg" : ""}">${fmtCel(v, tipo(k))}</td>`;
+  }).join("")}</tr>`).join("");
+  return `<div class="pl-barra"><span class="sp"></span><button class="hbtn" data-plcsv="${id}" title="Baixar a tabela em CSV (todas as linhas)">CSV</button></div><div class="pl-rolo"><table class="pl-t piv">${cab}<tbody>${corpo}</tbody></table></div>`;
+}
+function gradeRelogioBA(id, r, linhas) {
+  const n = r.du_total, fut = d => d > r.du_atual;
+  const cel = (v, d, cls = "") => `<td class="n${fut(d) ? " fut" : ""}${cls}">${v}</td>`;
+  const html = [`<thead><tr><th>DIA ÚTIL</th>${r.dias.map(d => `<th class="n${fut(d) ? " fut" : ""}">${d}</th>`).join("")}</tr></thead><tbody>`];
+  const mat = [["DIA ÚTIL", ...r.dias]];
+  for (const l of linhas) {
+    if (l.bloco) { html.push(`<tr class="bloco"><td colspan="${n + 1}">${esc(l.bloco)}</td></tr>`); mat.push([l.bloco]); continue; }
+    html.push(`<tr class="${l.cls || ""}"><td${l.dica ? ` title="${esc(l.dica)}"` : ""}>${esc(l.rot || "")}${l.extra ? `<span class="rot">${esc(l.extra)}</span>` : ""}</td>${l.vals.map((v, i) => {
+      const c = l.sinal && typeof v === "number" ? (v >= 0 ? " pos" : " neg") : "";
+      return cel(v === null || v === undefined ? "" : (l.d1 ? f1.format(v) : fI.format(v)), i + 1, c);
+    }).join("")}</tr>`);
+    mat.push([l.rot || "", ...l.vals.map(v => (v === null || v === undefined ? "" : String(v).replace(".", ",")))]);
+  }
+  BUI.dados[id] = {nome: "planilha_" + id, matriz: mat};
+  return `<div class="pl-barra"><span class="sp"></span><button class="hbtn" data-plcsv="${id}" title="Baixar a tabela em CSV">CSV</button></div><div class="pl-rolo"><table class="pl-t piv">${html.join("")}</tbody></table></div>`;
+}
+function linhasCurva(c, nome) {
+  return [{bloco: `META ${nome} · ${fI.format(c.total)} apreensões no mês`},
+    {rot: "NECESSIDADE DIA", extra: `${f1.format(c.necessidade_dia)} por dia`, vals: c.diferenca, sinal: true},
+    {rot: "NECESSIDADE ATUAL", vals: c.atual},
+    {rot: "", vals: c.acum.map(() => c.necessidade_dia), d1: true, dica: "necessidade por dia útil (meta ÷ dias úteis do mês)"},
+    {rot: "", vals: c.acum, d1: true, dica: "necessidade acumulada até o dia útil"}];
+}
+function relogioBA(r) {
+  const temReal = r.real_acum.some(v => v), temMeta = Object.keys(r.curvas).length;
+  if (!r.du_total || (!temReal && !temMeta)) { BUI.dados["meta-relogio"] = null; return `<div class="pl-vazio">sem dados para o filtro</div>`; }
+  const L = [{bloco: "REALIZADO POR DIA ÚTIL"}];
+  for (const [nome, fases] of [["121 A 360", ["JUDICIAL 1", "JUDICIAL 2"]], ["360 A 720", ["JUDICIAL 3"]], ["> 720", ["PREJUÍZO"]]]) {
+    const tem = fases.filter(f => r.real_por_dia[f]);
+    if (!tem.length) continue;
+    for (const f of tem) L.push({rot: f, vals: r.real_por_dia[f]});
+    L.push({rot: nome, cls: "sub", vals: r.dias.map((d, i) => (d > r.du_atual ? null : tem.reduce((s, f) => s + r.real_por_dia[f][i], 0)))});
+  }
+  if (r.real_por_dia["OUTRAS FASES"]) L.push({rot: "OUTRAS FASES", vals: r.real_por_dia["OUTRAS FASES"]});
+  L.push({rot: "TOTAL NO DIA", cls: "sub", vals: r.total_dia}, {rot: "REALIZADO ACUMULADO", cls: "tot", vals: r.real_acum});
+  for (const [nome, c] of Object.entries(r.curvas)) L.push(...linhasCurva(c, nome));
+  return (temMeta ? "" : `<p class="pl-nota">Meta não informada para o mês: a grade mostra só o realizado.</p>`) + gradeRelogioBA("meta-relogio", r, L);
+}
+function relogioAnalistaBA(lista, r) {
+  if (!r.du_total || !lista.length) { BUI.dados["meta-relogio-analista"] = null; return `<div class="pl-vazio">sem dados para o filtro</div>`; }
+  const L = [];
+  for (const a of lista) {
+    L.push({bloco: `${a.advogado} · ${a.meta_qtd ? "meta " + fI.format(a.meta_qtd) : "sem meta"}`},
+      {rot: "REALIZADO NO DIA", vals: a.real_dia}, {rot: "REALIZADO ACUMULADO", cls: "sub", vals: a.real_acum});
+    if (a.curva) L.push(...linhasCurva(a.curva, "100%").slice(1));
+  }
+  return gradeRelogioBA("meta-relogio-analista", r, L);
+}
+function compAnalistaBA(c) {
+  const meses = S.ba.mes ? c.meses.filter(m => m === S.ba.mes) : c.meses;
+  const flat = rs => rs.map(r => Object.assign({advogado: r.advogado, quebra: r.quebra, tipo: r.tipo}, ...meses.map(m => ({["m" + m]: r.valores[m]}))));
+  const cm = meses.map(m => C("m" + m, mesTxt(m), "int"));
+  return `<p class="pl-nota">Só conta a apreensão até o dia útil de hoje em cada mês (DIA ÚTIL OK da planilha).</p>` + subt("ADVOGADO × MÊS") +
+    tabelaBA("comp-adv", [C("advogado", "ADVOGADO"), ...cm], flat(c.por_adv), {csv: "comp_analista_mes"}) + subt("ADVOGADO × QUEBRA × MÊS") +
+    tabelaBA("comp-quebra", [C("advogado", "ADVOGADO", "txt", {rep: true}), C("quebra", "QUEBRA"), ...cm], flat(c.por_quebra), {csv: "comp_analista_quebra"});
+}
+function desenharSecoesBA(s) {
+  trocarHTML(corpoBA("localizados"), tabelaBA("localizados", [C("FINANCIADO", "FINANCIADO"), C("PASTA", "PASTA"), C("VALOR_RISCO", "VALOR DE RISCO", "rs"), C("UF", "UF"),
+    C("OBSERVACAO", "OBSERVAÇÃO PROCESSUAL"), C("COMPLEMENTO", "COMPLEMENTO"),
+    C("ULT_ACAO_RESP", "ÚLTIMA AÇÃO (sistema jurídico)", "data", {dica: "vem do sistema jurídico (última alteração do advogado responsável); não é mais digitada"}),
+    C("DT_LOCALIZACAO", "DATA LOCALIZAÇÃO", "data"), C("LOCALIZADOR", "LOCALIZADOR"), C("ADVOGADO", "ADVOGADO"), C("FASE", "FASE"),
+    C("MEMO_LOCALIZADO", "OBS", "txt", {cls: () => "obs", title: r => r.MEMO_LOCALIZADO || ""})], s.localizados, {tipo: "lista", csv: "localizados"}));
+  const vl = s.visao_localizados;
+  trocarHTML(corpoBA("visao-localizados"), !vl.adv_fase.length ? `<div class="pl-vazio">sem dados para o filtro</div>` :
+    subt("ADVOGADO × FASE") + tabelaBA("vl-adv-fase", PIVO_ADV("QTD LOC."), vl.adv_fase, {csv: "visao_localizados_advogado_fase"}) +
+    subt("POR FASE") + tabelaBA("vl-fase", PIVO_ADV("QTD LOC.").slice(1), vl.por_fase.map(r => Object.assign({}, r)), {csv: "visao_localizados_fase"}) +
+    subt("POR ADVOGADO") + tabelaBA("vl-adv", [C("advogado", "ADVOGADO"), ...PIVO_ADV("QTD LOC.").slice(2)], vl.por_adv, {csv: "visao_localizados_advogado"}));
+  trocarHTML(corpoBA("mandados"), tabelaBA("mandados", [C("advogado", "ADVOGADO", "txt", {rep: true}), C("fase", "FASE", "txt", {rep: true}),
+    C("observacao", "OBSERVAÇÃO", "txt", {rep: true}), C("complemento", "COMPLEMENTO"), C("valor_risco", "VLR DE RISCO", "rs"),
+    C("valor_performance", "VLR PERFORMANCE", "rs"), C("qtd", "QTD EXP.", "int")], s.mandados, {csv: "mandados"}));
+  trocarHTML(corpoBA("apreendidos"), tabelaBA("apreendidos", [C("FINANCIADO", "FINANCIADO"), C("PASTA", "PASTA"), C("VALOR_RISCO", "VALOR DE RISCO", "rs"),
+    C("VALOR_PERFORMANCE", "VALOR PERFORMANCE", "rs", {dica: "estimado = avaliação do bem ou 55% da FIPE",
+      html: r => (r.VALOR_PERFORMANCE === null ? "" : f2.format(r.VALOR_PERFORMANCE)) + (String(r.ORIGEM_VALOR || "").startsWith("estimado") ? `<span class="selo-est" title="${esc(r.ORIGEM_VALOR)}">estimado</span>` : "")}),
+    C("UF", "UF"), C("ADVOGADO", "ADVOGADO"), C("DT_APREENSAO", "DATA APREENSÃO", "data"), C("DIA_UTIL", "DIA ÚTIL", "int"), C("MES_APREENSAO", "MÊS APREENSÃO", "mes"),
+    C("FASE", "FASE"), C("LOCALIZADOR", "LOCALIZADOR"), C("DIA_UTIL_OK", "DIA ÚTIL OK"), C("DIA_UTIL_QUEBRA", "DIA ÚTIL QUEBRA")], s.apreendidos, {tipo: "lista", csv: "apreendidos"}) + NOTA_ETAPA);
+  const va = s.visao_apreendidos;
+  trocarHTML(corpoBA("visao-apreendidos"), (!va.adv_fase.length ? `<div class="pl-vazio">sem dados para o filtro</div>` :
+    subt("ADVOGADO × FASE") + tabelaBA("va-adv-fase", PIVO_ADV("QTD APREENDIDO"), va.adv_fase, {csv: "visao_apreendidos_advogado_fase"}) +
+    subt("POR FASE") + tabelaBA("va-fase", PIVO_ADV("QTD APREENDIDO").slice(1), va.por_fase, {csv: "visao_apreendidos_fase"})) + NOTA_ETAPA);
+  trocarHTML(corpoBA("comp-analista"), s.comp_analista.meses.length ? compAnalistaBA(s.comp_analista) : `<div class="pl-vazio">sem dados para o filtro</div>`);
+  const avisoM = s.meta_banco.aviso ? `<div class="pl-aviso">${esc(s.meta_banco.aviso)}</div>` : "";
+  const nota = `<p class="pl-nota">${esc(s.nota_mes)}</p>`;
+  trocarHTML(corpoBA("meta-banco"), avisoM + nota + tabelaMetaBA("meta-banco", "FASE / FAIXA", s.meta_banco));
+  trocarHTML(corpoBA("meta-relogio"), nota + relogioBA(s.meta_relogio));
+  trocarHTML(corpoBA("meta-analista"), nota + tabelaMetaBA("meta-analista", "ADVOGADO", s.meta_analista));
+  trocarHTML(corpoBA("meta-relogio-analista"), nota + relogioAnalistaBA(s.meta_relogio_analista, s.meta_relogio));
+  const cinza = r => (r.tipo !== "total" && r.passagens < 5 ? "cinza" : "");
+  trocarHTML(corpoBA("localizador"), subt("COMPARATIVO ENTRE LOCALIZADORES") +
+    `<p class="pl-nota">Fichas enviadas a cada localizador, com ou sem localização depois. LOCALIZOU = a localização aconteceu enquanto a ficha estava com ele; % LOCALIZOU = localizou ÷ fichas que teve (fora as que chegaram com o carro já achado). DIAS ATÉ LOCALIZAR = do envio à localização (mediana). Valem UF, ANALISTA, LOCALIZADOR e MÊS (mês do envio da ficha); FASE e ETAPA não se aplicam. Taxa com menos de 5 fichas fica em cinza.</p>` +
+    tabelaBA("comparativo", [C("localizador", "LOCALIZADOR"), C("pastas", "PASTAS", "int"), C("localizou", "LOCALIZOU", "int"),
+      C("pct_localizou", "% LOCALIZOU", "pct", {cls: cinza, title: r => (cinza(r) ? "menos de 5 fichas: taxa pouco estável" : "")}), C("apreendeu", "APREENDEU", "int"),
+      C("mediana_dias_localizar", "DIAS ATÉ LOCALIZAR", "d1", {dica: "mediana, do envio da ficha à localização"}),
+      C("mediana_dias_com_ficha", "DIAS COM A FICHA", "d1", {dica: "mediana de todas as fichas dele (sem localização: até hoje)"}),
+      C("substituido", "PASSOU A OUTRO", "int"), C("sem_localizacao", "SEM LOCALIZAÇÃO", "int"), C("valor_performance", "VLR PERFORMANCE", "rs"), C("ufs", "UFs")],
+    s.comparativo, {csv: "comparativo_localizadores"}) + subt("APREENSÕES POR LOCALIZADOR × UF") +
+    tabelaBA("por-localizador", [C("localizador", "LOCALIZADOR", "txt", {rep: true}), C("uf", "UF"), C("qtd", "QTD", "int"), C("valor_performance", "VLR PERFORMANCE", "rs")],
+      s.por_localizador, {csv: "apreensoes_por_localizador"}));
+}
+
+/* ---------- linha do tempo por pasta ---------- */
+function linhaTempoBA(lt) {
+  const el = corpoBA("linha-tempo");
+  const grupos = [["advogado", "Advogado"], ["uf", "UF"], ["fase", "Fase"], ["mes_localizacao", "Mês da localização"], ["localizador", "Localizador"]];
+  const ctl = `<div class="lt-ctl"><label>Agrupar por <select id="lt-grupo">${grupos.map(([k, t]) => `<option value="${k}"${BUI.grupo === k ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+    <div class="seg" role="group" aria-label="Janela">${[["30", "30 dias"], ["90", "90 dias"], ["180", "180 dias"], ["tudo", "Tudo"]].map(([k, t]) => `<button data-ltjan="${k}" class="${BUI.janela === k ? "on" : ""}">${t}</button>`).join("")}</div>
+    <span class="sp" style="flex:1"></span><button class="hbtn" data-plcsv="linha-tempo">CSV</button></div>
+    <div class="lt-leg">${NOME_EV.map((n, i) => `<span><i style="background:${COR_EV[i]}"></i>${n}</span>`).join("")}<span><i style="background:#888;box-shadow:inset 6px 0 4px -3px rgba(0,0,0,.6)"></i>começou antes da janela</span></div>`;
+  const de = Date.parse(lt.de + "T00:00:00Z"), ate = Date.parse(lt.ate + "T00:00:00Z"), span = Math.max(1, ate - de);
+  const pos = iso => Math.min(100, Math.max(0, (Date.parse(iso + "T00:00:00Z") - de) / span * 100));
+  const rotG = (k, v) => v ? (k === "mes_localizacao" ? new Date(Date.UTC(+v.split("/")[1], +v.split("/")[0] - 1, 1)).toLocaleDateString("pt-BR", {month: "short", year: "2-digit", timeZone: "UTC"}).replace(". de ", "/").replace(".", "") : v)
+    : {advogado: "SEM ADVOGADO", uf: "(sem UF)", fase: "SEM FASE", mes_localizacao: "(sem data de localização)", localizador: "(sem localizador)"}[k];
+  const mapa = new Map();
+  for (const p of lt.pastas) { const v = p[BUI.grupo] || null; if (!mapa.has(v)) mapa.set(v, []); mapa.get(v).push(p); }
+  const chaves = [...mapa.keys()].sort((a, b) => (a === null) - (b === null) || (BUI.grupo === "mes_localizacao" && a && b
+    ? (a.split("/")[1] * 100 + +a.split("/")[0]) - (b.split("/")[1] * 100 + +b.split("/")[0]) : String(a).localeCompare(String(b), "pt-BR", {numeric: true})));
+  BUI.dados["linha-tempo"] = {nome: "linha_tempo_" + BUI.janela, matriz: [["Pasta", "Financiado", "Advogado", "UF", "Fase", "Localizador", "Etapa", "Em aberto", "Parado há (dias)", "Marco", "Data", "Status", "Responsável"],
+    ...lt.pastas.flatMap(p => p.marcos.map(m => [p.pasta, p.financiado, p.advogado, p.uf, p.fase, p.localizador, p.etapa, p.em_aberto ? "sim" : "não", p.dias_parado ?? "", nomeMarco(m), dLonga(m[2]), m[3] ?? "", m[4] ?? ""]))]};
+  let ticks = "";
+  const d0 = new Date(de);
+  for (let d = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 1)); d.getTime() <= ate; d.setUTCMonth(d.getUTCMonth() + 1)) {
+    const x = (d.getTime() - de) / span * 100;
+    ticks += `<i class="lt-vl m" style="left:${x}%"></i>`;
+    if (x > 6 && x < 92) ticks += `<span class="lt-tick m" style="left:${x}%">${d.toLocaleDateString("pt-BR", {month: "short", year: "2-digit", timeZone: "UTC"}).replace(". de ", "/").replace(".", "")}</span>`;
+  }
+  if (span <= 200 * 86400000) for (let t = de; t <= ate; t += 86400000) {
+    const d = new Date(t); if (d.getUTCDay() !== 1) continue;
+    const x = (t - de) / span * 100; ticks += `<i class="lt-vl" style="left:${x}%"></i>`;
+    if (span <= 45 * 86400000 && x > 6 && x < 92) ticks += `<span class="lt-tick" style="left:${x}%">${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}</span>`;
+  }
+  const eixo = `<div class="lt-eixo"><div>PASTA · FINANCIADO</div><div class="lt-trilha">${ticks}<span class="lt-tick" style="left:2%">${dCurta(lt.de)}</span><span class="lt-tick" style="left:96%">hoje ${lt.ate.slice(8, 10)}/${lt.ate.slice(5, 7)}</span></div></div>`;
+  const linha = p => {
+    const ms = p.marcos; let seg = "";
+    ms.forEach((m, i) => {
+      const fim = i + 1 < ms.length ? ms[i + 1][2] : (p.em_aberto ? lt.ate : null);
+      const ini = m[2] < lt.de ? lt.de : m[2], x = pos(ini);
+      const tit = `${nomeMarco(m)}\n${dCurta(m[2])} → ${fim ? (fim === lt.ate && p.em_aberto && i === ms.length - 1 ? "hoje · parado há " + p.dias_parado + " dias" : dCurta(fim) + " · " + Math.round((Date.parse(fim) - Date.parse(m[2])) / 86400000) + " dias") : "concluída"}${m[2] < lt.de ? "\ncomeçou antes da janela" : ""}${m[3] ? "\nstatus: " + m[3] : ""}${m[4] ? "\nresponsável: " + m[4] : ""}\npasta ${p.pasta}`;
+      if (fim) seg += `<i class="lt-seg${m[2] < lt.de ? " cortado" : ""}" style="left:${x}%;width:${Math.max(0.4, pos(fim) - x)}%;background:${COR_EV[m[0]]}" title="${esc(tit)}"></i>`;
+      else seg += `<i class="lt-ponto" style="left:${x}%;background:${COR_EV[m[0]]}" title="${esc(tit)}"></i>`;
+    });
+    let txt = "";
+    if (!ms.length) txt = `<span class="lt-txt" style="left:2%">sem marcos na janela</span>`;
+    else if (p.em_aberto) {
+      const x = pos(ms[ms.length - 1][2] < lt.de ? lt.de : ms[ms.length - 1][2]), w = 100 - x, t = `parado há ${p.dias_parado} dias`;
+      txt = w >= 18 ? `<span class="lt-txt dentro" style="left:calc(${x}% + 6px)">${t}</span>` : `<span class="lt-txt" style="right:calc(${w}% + 6px)">${t}</span>`;
+    } else { const x = pos(ms[ms.length - 1][2]); txt = x > 80 ? `<span class="lt-txt" style="right:calc(${100 - x}% + 10px)">concluída</span>` : `<span class="lt-txt" style="left:calc(${x}% + 10px)">concluída</span>`; }
+    return `<div class="lt-linha${BUI.sel === p.pasta ? " sel" : ""}" data-pasta="${esc(p.pasta)}" role="button" tabindex="0"><div class="lt-rot"><b>${esc(p.pasta)}</b><span>${esc(p.financiado || "")}</span></div><div class="lt-trilha">${seg}${txt}</div></div>`;
+  };
+  const ordem = (a, b) => (a.dias_parado === null) - (b.dias_parado === null) || (b.dias_parado ?? 0) - (a.dias_parado ?? 0)
+    || (a.dias_parado === null ? ((b.marcos.at(-1) || [])[2] || "").localeCompare((a.marcos.at(-1) || [])[2] || "") : 0) || a.pasta.localeCompare(b.pasta);
+  const corpo = chaves.map(k => {
+    const ps = mapa.get(k).sort(ordem), id = String(k), fechado = BUI.ltCol.has(id), n = BUI.ltMais[id] || 40;
+    const ab = ps.filter(p => p.em_aberto && p.dias_parado !== null).map(p => p.dias_parado).sort((a, b) => a - b);
+    const med = ab.length ? (ab.length % 2 ? ab[ab.length >> 1] : (ab[ab.length / 2 - 1] + ab[ab.length / 2]) / 2) : null;
+    const resto = ps.length - n;
+    return `<button class="lt-grupo" data-ltgrupo="${esc(id)}" aria-expanded="${!fechado}">${fechado ? "▸" : "▾"} ${esc(rotG(BUI.grupo, k))} — ${fI.format(ps.length)} ${ps.length === 1 ? "pasta" : "pastas"} · ${med === null ? "nenhuma em aberto" : "mediana parado " + f1.format(med) + " dias"}</button>` +
+      (fechado ? "" : ps.slice(0, n).map(linha).join("") + (resto > 0 ? `<button class="lt-mais" data-ltmais="${esc(id)}">ver mais (${resto > 40 ? "40 de " : ""}${fI.format(resto)} restantes)</button>` : ""));
+  }).join("");
+  const resumo = `<p class="pl-nota">${fI.format(lt.pastas.length)} pastas na janela de ${dCurta(lt.de)} a ${dCurta(lt.ate)} · ${chaves.length} grupos</p>`;
+  trocarHTML(el, ctl + resumo + (lt.pastas.length ? eixo + corpo : `<div class="pl-vazio">sem pastas na janela para o filtro</div>`));
+}
+
+/* ---------- gaveta da pasta ---------- */
+function abrirGavetaBA(pasta) {
+  const est = BUI.est, r = est && est.linhas.find(x => x.PASTA === pasta), g = $("ba-gaveta");
+  if (!r) return;
+  BUI.sel = pasta;
+  QS("#ba-raiz [data-pasta]").forEach(e => e.classList.toggle("sel", e.dataset.pasta === pasta));
+  const pas = est.passagens.filter(p => p.PASTA === pasta), fin = [...pas].reverse().find(p => p.RESULTADO === "localizou");
+  const campo = (t, v) => `<dt>${t}</dt><dd>${v === null || v === undefined || v === "" ? "—" : v}</dd>`;
+  const res = {localizou: "localizou", substituido: "ficha passou a outro", encerrada: "carro já achado ou apreendido", sem_localizacao: "sem localização"};
+  const lt = (BAD.marcos[pasta] || []).map(m => ({d: m[2], rot: nomeMarco(m), cor: COR_EV[m[0]], st: m[3], resp: m[4]}))
+    .concat(pas.map(p => ({d: p.RECEBEU, rot: "Ficha enviada ao localizador", cor: "#a78bfa", st: p.LOCALIZADOR, resp: null}))).sort((a, b) => a.d.localeCompare(b.d));
+  let antes = null;
+  const itens = lt.map(e => {
+    const dias = antes ? Math.round((Date.parse(e.d.slice(0, 10)) - Date.parse(antes.slice(0, 10))) / 86400000) : null; antes = e.d;
+    return `<li><i style="background:${e.cor}"></i>${dLonga(e.d)}${e.d.length > 10 ? " " + e.d.slice(11, 16) : ""}${dias !== null ? ` <small style="display:inline">+${dias} dias</small>` : ""}<br><b>${esc(e.rot)}</b>${e.st || e.resp ? `<small>${esc([e.st, e.resp ? "responsável: " + e.resp : ""].filter(Boolean).join(" · "))}</small>` : ""}</li>`;
+  }).join("");
+  g.innerHTML = `<h3>Pasta ${esc(pasta)}<button class="hbtn" id="ba-fechar">Fechar ✕</button></h3>
+    <dl>${campo("Etapa", esc(r.ETAPA))}${campo("Financiado", esc(r.FINANCIADO))}${campo("Advogado", esc(r.ADVOGADO))}${campo("UF × comarca", esc([r.UF, r.COMARCA].filter(Boolean).join(" × ")))}
+    ${campo("Fase na data do evento", esc(r.FASE))}${campo("Valor de risco", r.VALOR_RISCO === null ? null : "R$ " + f2.format(r.VALOR_RISCO))}
+    ${campo("Valor de performance", r.VALOR_PERFORMANCE === null ? null : "R$ " + f2.format(r.VALOR_PERFORMANCE) + ` (${esc(r.ORIGEM_VALOR)})`)}
+    ${campo("Localizador", esc(r.LOCALIZADOR))}${campo("Data de localização", dLonga(r.DT_LOCALIZACAO))}${campo("Mandado vigente expedido", dLonga(r.DT_MANDADO))}
+    ${campo("Apreensão (dia útil do registro)", dLonga(r.DT_APREENSAO))}${campo("Apreensão (data real)", dLonga(r.DT_APREENSAO_REAL))}
+    ${campo("Observação processual", esc(r.OBSERVACAO))}${campo("Complemento", esc(r.COMPLEMENTO))}</dl>
+    <div class="pl-subtit">Localizadores</div>
+    ${!pas.length ? `<p class="pl-nota">Nenhuma ficha enviada a localizador registrada no sistema jurídico para esta pasta.</p>` :
+      (fin ? `<div class="caixa ok">Finalizou: <b>${esc(fin.LOCALIZADOR)}</b> — localizou <b>${f1.format(fin.DIAS_ATE_LOCALIZAR)} dias</b> depois de receber a ficha (${dLonga(fin.RECEBEU)} → ${dLonga(fin.ATE)}).</div>`
+        : `<div class="caixa nao">Nenhum localizador com a ficha localizou o veículo até agora (ou a localização veio antes da ficha).</div>`) +
+      `<div class="pl-rolo"><table class="pl-t piv"><thead><tr><th>Localizador</th><th>Recebeu</th><th>Até</th><th class="n">Dias com ele</th><th>Resultado</th></tr></thead><tbody>${pas.map(p =>
+        `<tr><td>${esc(p.LOCALIZADOR)}${p.FICHAS > 1 ? ` <span class="rot">(${p.FICHAS} fichas)</span>` : ""}</td><td>${dCurta(p.RECEBEU)}</td><td>${p.ATE ? dCurta(p.ATE) : "hoje"}</td><td class="n">${f1.format(p.DIAS)}</td><td class="${p.RESULTADO === "localizou" ? "pos" : p.RESULTADO === "sem_localizacao" ? "cinza" : ""}">${res[p.RESULTADO]}</td></tr>`).join("")}</tbody></table></div>
+      <p class="pl-nota-pe">Atribuição pela ficha: quem estava com a ficha quando a localização foi registrada. "Até" = próxima ficha a outro localizador, a localização ou a apreensão.</p>`}
+    <div class="pl-subtit">Linha do tempo</div><ul class="gv-lt">${itens || "<li>sem marcos</li>"}</ul>
+    <div class="pl-subtit">Memo da tarefa de localizado</div>${r.MEMO_LOCALIZADO ? `<div class="gv-memo">${esc(r.MEMO_LOCALIZADO)}</div>` : `<p class="pl-nota">Sem memo na tarefa de localizado.</p>`}`;
+  mostrar(g, true); $("ba-fechar").focus();
+}
+function fecharGavetaBA() { mostrar("ba-gaveta", false); }
+
+/* ---------- desenho da aba ---------- */
+function indiceBA() {
+  const ind = $("ba-indice");
+  if (ind.dataset.ok) return;
+  ind.dataset.ok = "1";
+  ind.innerHTML = `<b>ÍNDICE</b>` + SECOES_BA.map(([id, t]) => `<button data-plir="${id}">${t}</button>`).join("");
+  if ("IntersectionObserver" in window) {
+    const vis = new Set();
+    BUI.obs = new IntersectionObserver(es => {
+      for (const e of es) e.isIntersecting ? vis.add(e.target.id) : vis.delete(e.target.id);
+      const prim = SECOES_BA.find(([id]) => vis.has("ba-sec-" + id));
+      if (prim) QS("#ba-indice button").forEach(b => { b.classList.toggle("on", b.dataset.plir === prim[0]); b.toggleAttribute("aria-current", b.dataset.plir === prim[0]); });
+    }, {rootMargin: "-80px 0px -55% 0px"});
+    SECOES_BA.forEach(([id]) => BUI.obs.observe($("ba-sec-" + id)));
+  }
+}
+function desenharBA() {
+  if (!BAD) return;
+  const est = BUI.est = BA.estado(BAD, S.agora);
+  const q = est.quando;
+  $("ba-frescor").textContent = `dados do sistema jurídico de ${q.slice(8, 10)}/${q.slice(5, 7)} ${q.slice(11, 16)} (atualiza a cada 30 min, das 7h às 20h)`;
+  mostrar("ba-aviso", !!est.aviso); $("ba-aviso").textContent = est.aviso || "";
+  desenharSecoesBA(BA.secoes(BAD, S.agora, S.ba));
+  linhaTempoBA(BA.linhaTempo(BAD, S.agora, S.ba, BUI.janela));
+}
+function renderPlanilha() {
+  carregarBA().then(j => {
+    if (!j) { mostrar("ba-aviso", true); $("ba-aviso").textContent = "Erro ao carregar a aba Busca e Apreensão: arquivo de dados indisponível (abra o painel por um servidor)."; return; }
+    indiceBA(); segmentacoesBA(); desenharBA();
+  });
+}
+function iniciarBA() {
+  const raiz = $("ba-raiz");
+  raiz.addEventListener("click", ev => {
+    const t = ev.target.closest("[data-plseg],[data-pllimpa],[data-plord],[data-plpag],[data-plcsv],[data-plir],[data-ltjan],[data-ltgrupo],[data-ltmais],[data-pasta],#ba-fechar");
+    if (!t) return;
+    const d = t.dataset;
+    if (t.id === "ba-fechar") return fecharGavetaBA();
+    if (d.plseg) {
+      const k = d.plseg, v = d.v;
+      if (k === "mes") S.ba.mes = S.ba.mes === v ? null : v;
+      else S.ba[k] = S.ba[k].includes(v) ? S.ba[k].filter(x => x !== v) : [...S.ba[k], v];
+      return agendarBA();
+    }
+    if (d.pllimpa) { S.ba[d.pllimpa] = d.pllimpa === "mes" ? null : []; return agendarBA(); }
+    if (d.plord) {
+      const [id, k] = d.plord.split("|"), st = BUI.tab[id];
+      st.ord = !st.ord || st.ord.k !== k ? {k, dir: 1} : st.ord.dir > 0 ? {k, dir: -1} : null;
+      return desenharSecoesBA(BA.secoes(BAD, S.agora, S.ba));
+    }
+    if (d.plpag) { const [id, s] = d.plpag.split("|"); BUI.tab[id].pag += +s; return desenharSecoesBA(BA.secoes(BAD, S.agora, S.ba)); }
+    if (d.plcsv) return csvTabelaBA(d.plcsv);
+    if (d.plir) { $("ba-sec-" + d.plir).scrollIntoView({behavior: RM ? "auto" : "smooth", block: "start"}); QS("#ba-indice button").forEach(b => b.classList.toggle("on", b === t)); return; }
+    if (d.ltjan) { BUI.janela = d.ltjan; store.set("bap_ba_janela", d.ltjan); return linhaTempoBA(BA.linhaTempo(BAD, S.agora, S.ba, BUI.janela)); }
+    if (d.ltgrupo !== undefined) { BUI.ltCol.has(d.ltgrupo) ? BUI.ltCol.delete(d.ltgrupo) : BUI.ltCol.add(d.ltgrupo); return linhaTempoBA(BA.linhaTempo(BAD, S.agora, S.ba, BUI.janela)); }
+    if (d.ltmais !== undefined) { BUI.ltMais[d.ltmais] = (BUI.ltMais[d.ltmais] || 40) + 40; return linhaTempoBA(BA.linhaTempo(BAD, S.agora, S.ba, BUI.janela)); }
+    if (d.pasta) return abrirGavetaBA(d.pasta);
+  });
+  raiz.addEventListener("keydown", ev => { const t = ev.target.closest("[data-pasta]"); if (t && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); abrirGavetaBA(t.dataset.pasta); } });
+  raiz.addEventListener("change", ev => { if (ev.target.id === "lt-grupo") { BUI.grupo = ev.target.value; store.set("bap_ba_grupo", BUI.grupo); linhaTempoBA(BA.linhaTempo(BAD, S.agora, S.ba, BUI.janela)); } });
+  raiz.addEventListener("input", ev => {
+    const id = ev.target.dataset.plbusca; if (!id) return;
+    const st = BUI.tab[id]; st.busca = ev.target.value; st.pag = 0;
+    const pos = ev.target.selectionStart;
+    desenharSecoesBA(BA.secoes(BAD, S.agora, S.ba));
+    const novo = document.querySelector(`[data-plbusca="${id}"]`); if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); }
+  });
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !$("ba-gaveta").classList.contains("oculto")) fecharGavetaBA(); });
+}
+
 function renderTabelasAgenda(R) {
   const t = R.tabelas;
   trocarHTML($("c-produtivos"), tabelaPlanilha("Agendamento", t.produtivos));
@@ -1182,6 +1742,7 @@ function iniciar() {
   QS("#segVistaAdv [data-vista]").forEach(b => b.onclick = () => { S.vistaAdv = b.dataset.vista; QS("#segVistaAdv button").forEach(x => x.classList.toggle("on", x === b)); renderAdvogados(S.R); });
   QS("#segCE [data-ce]").forEach(b => b.onclick = () => { S.ce = b.dataset.ce; QS("#segCE button").forEach(x => x.classList.toggle("on", x === b)); renderCE(S.R); });
   if (typeof iniciarExportacao === "function") iniciarExportacao();
+  iniciarBA();
   construirFiltros();
   const m = /aba=(oper|gest|padroes|planilha)/.exec(location.search + location.hash);
   S.R = A.tudo(D, S.agora, S.f); renderTopo(); renderAtivos();
