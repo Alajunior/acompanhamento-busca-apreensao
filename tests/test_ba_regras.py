@@ -177,3 +177,38 @@ def test_taxa_localizou_calibrada(ba_fontes):
     p = passagens(ba_fontes, lin, AGORA, mapa)
     taxa = (p.RESULTADO == "localizou").sum() / ((p.RESULTADO != "encerrada").sum())
     assert 0.15 <= taxa <= 0.22, taxa
+
+
+# ---------- marcos da linha do tempo (Task 6) ----------
+from src.ba_regras import EVENTOS, marcos_linha_tempo   # noqa: E402
+
+
+def _lt(f):
+    lin = linhas_pasta(f, AGORA, {})
+    return marcos_linha_tempo(marcos(f.tarefas), lin, AGORA.date())
+
+
+def test_desempate_no_mesmo_dia():
+    f = fontes([tarefa("1", "2º MANDADO EXPEDIDO", "2026-10-10 09:00", "2026-10-10 18:00", "CONCLUIDO"),
+                tarefa("1", "1º MANDADO NEGATIVO", "2026-10-10 15:00", "2026-10-11", "CONCLUIDO"),
+                tarefa("1", LOC, "2026-10-10 16:00", "2026-10-10 17:00", "VEICULO APREENDIDO"),
+                tarefa("1", "BEM APREENDIDO", "2026-10-10 17:00", "2026-10-11")])
+    ev = [(EVENTOS[e], n) for e, n, *_ in _lt(f)["1"]]
+    assert ev == [("LOCALIZADO", None), ("NEGATIVO", 1), ("EXPEDIDO", 2), ("APREENDIDO", None)]
+
+
+def test_localizado_um_por_dia_distinto_e_status_do_mais_recente():
+    f = fontes([tarefa("1", LOC, "2026-10-01 09:00", "2026-10-01 10:00", "AGENDADO EQUIVOCADAMENTE"),
+                tarefa("1", LOC, "2026-10-01 11:00"), tarefa("1", LOC, "2026-10-05"),
+                tarefa("1", "1º MANDADO EXPEDIDO", "2026-10-02", "2026-10-20", "REAGENDADO"),
+                tarefa("1", "1º MANDADO EXPEDIDO", "2026-10-20", None, None, adv="ADV-02")])
+    m = _lt(f)["1"]
+    assert [(EVENTOS[e], d) for e, _, d, *_ in m] == [("LOCALIZADO", "2026-10-01"), ("EXPEDIDO", "2026-10-02"),
+                                                      ("LOCALIZADO", "2026-10-05")]
+    assert m[1][3] is None and m[1][4] == "ADV-01"          # status da mais recente, responsável da primeira
+
+
+def test_apreendido_na_data_real():
+    f = fontes([tarefa("1", "BEM APREENDIDO", "2026-10-30 20:00", "2026-10-31", "CONCLUIDO")],
+               [campo("1", "DATA DA APREENSÃO", "29/10/2026", "2026-10-30 20:00")])
+    assert [(EVENTOS[e], d, st) for e, _, d, st, _ in _lt(f)["1"]] == [("APREENDIDO", "2026-10-29", "CONCLUIDO")]

@@ -392,3 +392,40 @@ def passagens(f, linhas: pd.DataFrame, instante: pd.Timestamp, localizadores: di
                 cand[-1]["VALOR_PERFORMANCE"] = None if valor is None or pd.isna(valor) else float(valor)
         out += blocos
     return pd.DataFrame(out, columns=COLS_PASSAGEM)
+
+
+# ---------------- marcos da linha do tempo ----------------
+_ORDEM_FLUXO = {e: i for i, e in enumerate(EVENTOS)}
+
+
+def marcos_linha_tempo(mrc: pd.DataFrame, linhas: pd.DataFrame, hoje: date) -> dict[str, list]:
+    """Pasta → [[índice do evento, Nº, "AAAA-MM-DD", status, responsável], ...] consolidados e na ordem do dia.
+
+    Um marco por (evento, Nº) na menor data; LOCALIZADO um por dia; APREENDIDO na data real da apreensão; no mesmo dia,
+    Nº do mandado (ausente = 0) e depois a ordem do fluxo, com a apreensão fechando o dia.
+    """
+    reais = linhas.set_index("PASTA")["DT_APREENSAO_REAL"].to_dict()
+    m = mrc[mrc["PASTA"].isin(reais.keys()) & (mrc["DATA"].dt.date <= hoje)].sort_values(["PASTA", "DATA", "ID_TAREFA"])
+    m = m.assign(DIA=m["DATA"].dt.date)
+    out: dict[str, list] = {}
+    for pasta, g in m.groupby("PASTA", sort=True):
+        itens = []
+        nao_ap = g[g["EVENTO"] != "APREENDIDO"]
+        nao_ap = nao_ap.assign(GRUPO=[(e, n if not pd.isna(n) else None, d if e == "LOCALIZADO" else None)
+                                      for e, n, d in zip(nao_ap["EVENTO"], nao_ap["N_MDD"], nao_ap["DIA"])])
+        for (ev, n, _), grp in nao_ap.groupby("GRUPO", sort=False):
+            st = grp["STATUS_FINAL"].iloc[-1]
+            itens.append((grp["DIA"].min(), ev, None if n is None else int(n),
+                          None if st is None or pd.isna(st) else st, grp["RESPONSAVEL"].iloc[0]))
+        real = reais.get(pasta)
+        if real is not None and not pd.isna(real):
+            ap = g[g["EVENTO"] == "APREENDIDO"]
+            if len(ap):
+                st, resp = ap["STATUS_FINAL"].iloc[-1], ap["RESPONSAVEL"].iloc[0]
+            else:
+                la = g[(g["EVENTO"] == "LOCALIZADO") & (g["STATUS_FINAL"] == VEIC_APREENDIDO)]
+                st, resp = (VEIC_APREENDIDO, la["RESPONSAVEL"].iloc[-1]) if len(la) else (None, None)
+            itens.append((real, "APREENDIDO", None, None if st is None or pd.isna(st) else st, resp))
+        itens.sort(key=lambda x: (x[0], 99 if x[1] == "APREENDIDO" else (x[2] or 0), _ORDEM_FLUXO[x[1]]))
+        out[pasta] = [[_ORDEM_FLUXO[ev], n, d.isoformat(), st, resp] for d, ev, n, st, resp in itens]
+    return out
