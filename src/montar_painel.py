@@ -9,6 +9,7 @@ Payload:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import date, time
 from pathlib import Path
@@ -202,10 +203,19 @@ def _json(x) -> str:
     return json.dumps(x, ensure_ascii=False, allow_nan=False, separators=(",", ":")).replace("</", r"<\/")
 
 
-def montar_html(payload: dict, saida: Path) -> None:
+def versao_dados(pasta: Path) -> str:
+    """Hash dos arquivos que a página busca depois (vai na URL deles)."""
+    h = hashlib.sha1()
+    for a in ("bd.json", "placas.json", "ba.json", "ba.js"):
+        h.update((pasta / a).read_bytes())
+    return h.hexdigest()[:10]
+
+
+def montar_html(payload: dict, saida: Path, versao: str = "dev") -> None:
     payload = {k: v for k, v in payload.items() if not k.startswith("_")}   # caches internos (ex.: referencia) não vão para a página
     html = MODELO.read_text(encoding="utf-8").replace("/*__DADOS__*/", "const DADOS = " + _json(payload) + ";")
     mapa = json.loads(MAPA.read_text(encoding="utf-8"))   # embutido: o mapa funciona também abrindo o arquivo local
+    html = html.replace("__VERSAO__", versao)
     html = html.replace("/*__MAPA__*/", "const MAPA_UF = " + _json(mapa) + ";")
     for marca, arq in SCRIPTS.items():
         html = html.replace(marca, arq.read_text(encoding="utf-8").replace("</", r"<\/") if arq.exists() else "")
@@ -245,11 +255,11 @@ def main() -> None:
     linha = linha_do_tempo(sim)
     cargas = padroes.cargas(sim)
     payload = montar_payload(linha, cargas)
-    montar_html(payload, RAIZ / "docs" / "index.html")
     montar_bd(linha, payload, RAIZ / "docs" / "bd.json")
     montar_placas(cargas, padroes.bancos_por_pasta(sim), payload, RAIZ / "docs" / "placas.json", padroes.apreendidos_da_simulacao(sim))
     montar_ba(sim, RAIZ / "docs" / "ba.json")
     (RAIZ / "docs" / "ba.js").write_bytes((RAIZ / "src" / "ba.js").read_bytes())   # carregado sob demanda junto com o ba.json
+    montar_html(payload, RAIZ / "docs" / "index.html", versao_dados(RAIZ / "docs"))   # por último: a versão é o hash dos outros
     print(" · ".join(f"docs/{a}: {(RAIZ / 'docs' / a).stat().st_size / 1024:.0f} KB" for a in ("index.html", "bd.json", "placas.json", "ba.json")))
 
 

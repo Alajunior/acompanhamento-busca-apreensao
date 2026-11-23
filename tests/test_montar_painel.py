@@ -217,7 +217,7 @@ def test_index_html_nao_inclui_ba(html_gerado):
 
 def test_ba_js_sob_demanda(html_gerado):
     """O código da aba Busca e Apreensão vem com o ba.json, só quando a aba abre (o HTML fica abaixo de 1 MB)."""
-    assert "function linhaTempo(" not in html_gerado and "/*__BA__*/" not in html_gerado and '"ba.js"' in html_gerado
+    assert "function linhaTempo(" not in html_gerado and "/*__BA__*/" not in html_gerado and '"ba.js?v="' in html_gerado
 
 
 def test_docs_ba_js_em_dia():
@@ -282,3 +282,22 @@ def test_trocar_de_aba_sai_da_tela_cheia(html_gerado):
 
 def test_trajeto_destacado_zera_ao_trocar_a_carga(html_gerado):
     assert "PD.trajK" in _funcao(html_gerado, "renderPadroes")
+
+
+def test_arquivos_de_dados_com_versao_na_url(html_gerado):
+    # o Pages guarda os arquivos por 10 min: sem versão, a página nova pode pegar um placas.json antigo
+    for arq in ("placas.json", "ba.json", "ba.js"):
+        assert f'("{arq}")' not in html_gerado and f'"{arq}?v=" + VERSAO' in html_gerado
+    assert 'D.fontes_bd + "?v=" + VERSAO' in html_gerado and "__VERSAO__" not in html_gerado
+
+
+def test_versao_muda_com_os_dados(tmp_path, payload):
+    from src.montar_painel import versao_dados
+    for a in ("bd.json", "placas.json", "ba.json", "ba.js"):
+        (tmp_path / a).write_text("x", encoding="utf-8")
+    v1 = versao_dados(tmp_path)
+    (tmp_path / "placas.json").write_text("y", encoding="utf-8")
+    v2 = versao_dados(tmp_path)
+    assert v1 != v2 and len(v1) == 10
+    montar_html(payload, tmp_path / "i.html", v2)
+    assert f'const VERSAO = "{v2}";' in (tmp_path / "i.html").read_text(encoding="utf-8")

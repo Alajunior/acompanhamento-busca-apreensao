@@ -584,6 +584,7 @@ body[data-theme="light"] .pl-t thead tr.n2 th{color:#000}
 
 <script>
 /*__DADOS__*/
+const VERSAO = "__VERSAO__";   // hash dos arquivos de dados: o cache do Pages (10 min) não mistura página nova com dado antigo
 /*__MAPA__*/
 </script>
 <script>
@@ -1134,7 +1135,7 @@ let BAD, BAD_CARGA;   // ba.json: undefined = ainda não carregado; null = indis
 function carregarBA() {
   if (BAD !== undefined) return Promise.resolve(BAD);
   const script = src => new Promise((ok, erro) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = erro; document.head.appendChild(s); });
-  BAD_CARGA = BAD_CARGA || Promise.all([fetch("ba.json").then(r => (r.ok ? r.json() : null)), script("ba.js")])   // código e dados da aba só quando ela abre
+  BAD_CARGA = BAD_CARGA || Promise.all([fetch("ba.json?v=" + VERSAO).then(r => (r.ok ? r.json() : null)), script("ba.js?v=" + VERSAO)])   // código e dados da aba só quando ela abre
     .then(([j]) => j).catch(() => null).then(j => (BAD = j));
   return BAD_CARGA;
 }
@@ -1604,7 +1605,7 @@ const POR_PAG = 40;
 let PL, PL_CARGA;   // placas.json: undefined = ainda não carregado; null = indisponível; PL_CARGA = a busca em andamento (uma só)
 function carregarPlacas() {
   if (PL !== undefined) return Promise.resolve(PL);
-  PL_CARGA = PL_CARGA || fetch("placas.json").then(r => (r.ok ? r.json() : null)).catch(() => null).then(j => (PL = j));
+  PL_CARGA = PL_CARGA || fetch("placas.json?v=" + VERSAO).then(r => (r.ok ? r.json() : null)).catch(() => null).then(j => (PL = j));
   return PL_CARGA;
 }
 function detalhes(k) {
@@ -1806,7 +1807,7 @@ async function csvPadroesPd() {
 let BD;   // undefined = ainda não carregado; null = indisponível (arquivo aberto sem servidor)
 async function carregarBD() {
   if (BD !== undefined) return BD;
-  try { const r = await fetch(D.fontes_bd); BD = r.ok ? await r.json() : null; } catch (e) { BD = null; }
+  try { const r = await fetch(D.fontes_bd + "?v=" + VERSAO); BD = r.ok ? await r.json() : null; } catch (e) { BD = null; }
   return BD;
 }
 function baixar(nome, conteudo, tipo) {
