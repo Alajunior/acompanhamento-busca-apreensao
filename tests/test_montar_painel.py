@@ -161,3 +161,18 @@ def test_placa_das_pastas(payload):
 def test_html_abaixo_de_1mb(tmp_path, payload):
     montar_html(payload, tmp_path / "i.html")
     assert (tmp_path / "i.html").stat().st_size < 1.0 * 1024 * 1024
+
+
+@pytest.fixture(scope="module")
+def html_gerado(tmp_path_factory, payload):
+    saida = tmp_path_factory.mktemp("html") / "i.html"
+    montar_html(payload, saida)
+    return saida.read_text(encoding="utf-8")
+
+
+def test_tres_tabelas_na_operacao(html_gerado):
+    oper = html_gerado.split('<section id="v-oper"')[1].split("</section>")[0]
+    for card in ("produtivos", "follow", "diligencia"):
+        assert f'data-card="{card}"' in oper
+    plan = html_gerado.split('<section id="v-planilha"')[1].split("</section>")[0]
+    assert 'id="ba-raiz"' in plan and "c-produtivos" not in plan

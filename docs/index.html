@@ -332,6 +332,11 @@ body.estatico *,body.estatico *::before,body.estatico *::after{animation:none!im
       <div><div class="lb">Mais recentes, últimas 24 horas</div><div id="loc-rec"></div><p class="regra">Lista completa na exportação (botão Exportar Excel, aba Localizados).</p></div>
       <div><div class="lb">Cidades com mais veículos, 30 dias</div><div id="loc-cid"></div></div>
     </div></div>
+  <div class="g3">
+    <div class="glass" data-card="produtivos"><div class="ctitle">Produtivos<button class="hbtn" data-csv="produtivos">CSV</button></div><div id="c-produtivos"></div></div>
+    <div class="glass" data-card="follow"><div class="ctitle">Follow<button class="hbtn" data-csv="follow">CSV</button></div><div id="c-follow"></div></div>
+    <div class="glass" data-card="diligencia"><div class="ctitle">Em diligência<button class="hbtn" data-csv="diligencia">CSV</button></div><div id="c-diligencia"></div></div>
+  </div>
   <div class="g2">
     <div class="glass" data-card="escada"><div class="ctitle">Escada de mandados<button class="hbtn" data-h="h-escada">ⓘ</button><button class="hbtn" data-csv="escada">CSV</button></div>
       <p class="desc">Tentativa × situação do mandado. "Chegou" = % dos processos em mandado que alcançaram a tentativa. 1º mandado requerido não aparece porque não faz parte dos tipos da regra oficial.</p>
@@ -367,7 +372,7 @@ body.estatico *,body.estatico *::before,body.estatico *::after{animation:none!im
     <div class="help" id="h-mov"><b>Como ler:</b> compara a publicação atual com a primeira foto do dia, com os mesmos filtros. Entradas e saídas são pastas que apareceram ou sumiram; mudança de agendamento é a troca do tipo da tarefa; mudança de etapa é a troca de fase (por exemplo, de AGUARDANDO LIMINAR para LIMINAR DEFERIDA).</div>
     <div id="c-mov"></div></div>
   <div class="glass" data-card="prodag"><div class="ctitle">Produtivos por agendamento<button class="hbtn" data-h="h-prodag">ⓘ</button></div>
-    <div class="help" id="h-prodag"><b>Como ler:</b> a mesma tabela "Produtivos" da aba Busca e Apreensão, em barras: quantos processos estão em cada tipo de tarefa.</div>
+    <div class="help" id="h-prodag"><b>Como ler:</b> a mesma tabela "Produtivos", acima, em barras: quantos processos estão em cada tipo de tarefa.</div>
     <div class="chart h260"><canvas id="g-prodag"></canvas></div><div id="v-prodag"></div></div>
 </section>
 
@@ -407,12 +412,7 @@ body.estatico *,body.estatico *::before,body.estatico *::after{animation:none!im
 
 <!-- =================== Busca e Apreensão (modo planilha) =================== -->
 <section id="v-planilha" class="oculto">
-  <p class="desc">Modo planilha: réplica das tabelas dinâmicas da planilha original do jurídico, calculadas com os filtros ativos.</p>
-  <div class="g3">
-    <div class="glass" data-card="produtivos"><div class="ctitle">Produtivos<button class="hbtn" data-csv="produtivos">CSV</button></div><div id="c-produtivos"></div></div>
-    <div class="glass" data-card="follow"><div class="ctitle">Follow<button class="hbtn" data-csv="follow">CSV</button></div><div id="c-follow"></div></div>
-    <div class="glass" data-card="diligencia"><div class="ctitle">Em diligência<button class="hbtn" data-csv="diligencia">CSV</button></div><div id="c-diligencia"></div></div>
-  </div>
+  <div id="ba-raiz"></div>
 </section>
 
 <!-- =================== Padrões de placa =================== -->
@@ -1524,7 +1524,7 @@ function renderLoc(R) {
   trocarHTML($("loc-cid"), L.cidades.length ? L.cidades.map(([c, u, n, pc]) => `<div class="pl"><span>${esc(c)}/${esc(u)}</span><span class="num">${int(n)} · ${p1(pc)}</span><span class="tr"><i style="width:${n / maxC * 100}%;background:var(--compB)"></i></span></div>`).join("")
     : VAZIO("Nenhum veículo visto em 30 dias no filtro atual."));
 }
-function renderOper(R) { renderKpis(R); renderLoc(R); renderEscada(R); renderPrazos(R); renderAdvogados(R); renderMapa(R); renderRegiao(R); renderMov(R); renderProdAg(R); }
+function renderOper(R) { renderKpis(R); renderLoc(R); renderEscada(R); renderPrazos(R); renderAdvogados(R); renderMapa(R); renderRegiao(R); renderMov(R); renderProdAg(R); renderTabelasAgenda(R); }
 
 /* ======================= Gestão ======================= */
 function renderDest(R) {
@@ -1593,7 +1593,8 @@ function tabelaPlanilha(rotulo, linhas) {
   return `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>${rotulo}</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${linhas.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${int(v)}</td><td>${p2(v / tot * 100)}</td></tr>`).join("")}
     <tr class="tot"><td>Total Geral</td><td>${int(tot)}</td><td>100,00%</td></tr></tbody></table></div>`;
 }
-function renderPlanilha(R) {
+function renderPlanilha(R) {}   // aba Busca e Apreensão: preenchida pela Planilha (ba.js)
+function renderTabelasAgenda(R) {
   const t = R.tabelas;
   trocarHTML($("c-produtivos"), tabelaPlanilha("Agendamento", t.produtivos));
   trocarHTML($("c-follow"), tabelaPlanilha("Fase", t.follow));
