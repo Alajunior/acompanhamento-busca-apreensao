@@ -2082,9 +2082,14 @@ function abrirGavetaBA(pasta) {
       <p class="pl-nota-pe">Atribuição pela ficha: quem estava com a ficha quando a localização foi registrada. "Até" = próxima ficha a outro localizador, a localização ou a apreensão.</p>`}
     <div class="pl-subtit">Linha do tempo</div><ul class="gv-lt">${itens || "<li>sem marcos</li>"}</ul>
     <div class="pl-subtit">Memo da tarefa de localizado</div>${r.MEMO_LOCALIZADO ? `<div class="gv-memo">${esc(r.MEMO_LOCALIZADO)}</div>` : `<p class="pl-nota">Sem memo na tarefa de localizado.</p>`}`;
+  BUI.voltar = document.activeElement;
   mostrar(g, true); $("ba-fechar").focus();
 }
-function fecharGavetaBA() { mostrar("ba-gaveta", false); }
+function fecharGavetaBA() {
+  mostrar("ba-gaveta", false);
+  const v = BUI.voltar && document.contains(BUI.voltar) ? BUI.voltar : (BUI.sel && document.querySelector(`#ba-raiz [data-pasta="${CSS.escape(BUI.sel)}"]`));
+  if (v) v.focus({preventScroll: true});
+}
 
 /* ---------- desenho da aba ---------- */
 function indiceBA() {
@@ -2117,11 +2122,30 @@ function renderPlanilha() {
     indiceBA(); segmentacoesBA(); desenharBA();
   });
 }
+function seletorFocoBA(t) {
+  const a = ["plseg", "pllimpa", "plord", "plpag", "ltjan", "ltgrupo", "ltmais"].find(k => t.dataset[k] !== undefined);
+  if (!a) return null;
+  const v = CSS.escape(t.dataset[a]);
+  return {sel: `[data-${a}="${v}"]` + (a === "plseg" ? `[data-v="${CSS.escape(t.dataset.v)}"]` : ""), a, v: t.dataset[a]};
+}
+function refocarBA(s) {
+  let el = $("ba-raiz").querySelector(s.sel);
+  if (!el || el.disabled) {
+    if (s.a === "pllimpa") el = $("ba-raiz").querySelector(`[data-plseg="${CSS.escape(s.v)}"]`);
+    if (s.a === "plpag") { const id = CSS.escape(s.v.split("|")[0]); el = $("ba-raiz").querySelector(`[data-plpag^="${id}|"]:not([disabled])`); }
+  }
+  if (el) el.focus({preventScroll: true});
+}
 function iniciarBA() {
   const raiz = $("ba-raiz");
   raiz.addEventListener("click", ev => {
     const t = ev.target.closest("[data-plseg],[data-pllimpa],[data-plord],[data-plpag],[data-plcsv],[data-plir],[data-ltjan],[data-ltgrupo],[data-ltmais],[data-pasta],#ba-fechar");
     if (!t) return;
+    const sel = seletorFocoBA(t);
+    acaoBA(t);
+    if (sel) refocarBA(sel);   // o redesenho destrói o botão: o foco volta ao mesmo controle (teclado)
+  });
+  function acaoBA(t) {
     const d = t.dataset;
     if (t.id === "ba-fechar") return fecharGavetaBA();
     if (d.plseg) {
@@ -2143,7 +2167,7 @@ function iniciarBA() {
     if (d.ltgrupo !== undefined) { BUI.ltCol.has(d.ltgrupo) ? BUI.ltCol.delete(d.ltgrupo) : BUI.ltCol.add(d.ltgrupo); return linhaTempoBA(BA.linhaTempo(BAD, S.agora, S.ba, BUI.janela)); }
     if (d.ltmais !== undefined) { BUI.ltMais[d.ltmais] = (BUI.ltMais[d.ltmais] || 40) + 40; return linhaTempoBA(BA.linhaTempo(BAD, S.agora, S.ba, BUI.janela)); }
     if (d.pasta) return abrirGavetaBA(d.pasta);
-  });
+  }
   raiz.addEventListener("keydown", ev => { const t = ev.target.closest("[data-pasta]"); if (t && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); abrirGavetaBA(t.dataset.pasta); } });
   raiz.addEventListener("change", ev => { if (ev.target.id === "lt-grupo") { BUI.grupo = ev.target.value; store.set("bap_ba_grupo", BUI.grupo); linhaTempoBA(BA.linhaTempo(BAD, S.agora, S.ba, BUI.janela)); } });
   raiz.addEventListener("input", ev => {
