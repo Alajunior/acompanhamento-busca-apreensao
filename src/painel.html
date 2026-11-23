@@ -222,15 +222,30 @@ body[data-theme="light"] .faixaest button{background:#fff}
 .pdbloco>.lb{display:block;margin-bottom:4px}
 .hist{display:flex;align-items:flex-end;gap:2px;height:70px;border-bottom:1px solid var(--bd)}
 .hist i{flex:1;background:var(--compB);border-radius:2px 2px 0 0;min-height:1px}
-.histr{display:flex;gap:2px;font-size:9.5px;color:var(--t2)} .histr span{flex:1;text-align:center}
+.histr{display:flex;gap:2px;font-size:9.5px;color:var(--t2)} .histr span{flex:1;text-align:center;min-width:0}
+.histr.h24{font-size:8px;letter-spacing:-.03em}
 .pdhist{display:grid;grid-template-columns:1fr 2.2fr;gap:14px}
-#pd-mapa{height:620px;border-radius:12px;border:1px solid var(--bd);z-index:0}
-body:not([data-theme="light"]) #pd-mapa .leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9)}
+#pd-caixa{position:relative}
+#pd-mapa{height:min(640px,calc(100vh - 150px));min-height:420px;border-radius:14px;border:1px solid var(--bd);z-index:0}
+body:not([data-theme="light"]) #pd-mapa .leaflet-tile{filter:grayscale(1) invert(1) brightness(.78) contrast(1.15)}
+body[data-theme="light"] #pd-mapa .leaflet-tile{filter:grayscale(.9) brightness(1.04) contrast(.92)}
 body:not([data-theme="light"]) #pd-mapa{background:#1b1f27}
+#pd-tela-cheia{position:absolute;top:10px;right:10px;z-index:800;font-size:15px;padding:4px 9px;background:var(--glass);backdrop-filter:blur(6px)}
+#pd-caixa.cheia{position:fixed;inset:12px;z-index:3000;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+#pd-caixa.cheia #pd-mapa{height:100%;min-height:0;border-radius:18px}
+.pd-leg{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:12px;color:var(--t2);margin-top:8px}
+.pd-leg p{flex-basis:100%;margin:0}
+.pd-leg i,.traj .bol{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.pd-leg i.bol,.traj .bol{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.55);margin-right:4px}
+.traj{margin-top:6px} .traj tr{cursor:pointer} .traj td{padding:5px 6px}
+.traj tr:hover td{background:var(--hover)} .traj tr.on td{background:color-mix(in srgb,var(--ac) 10%,transparent)}
+.traj tr:focus-visible{outline:2px solid var(--ac);outline-offset:-2px}
+.traj-anim{animation:fluxo 1.1s linear infinite} @keyframes fluxo{to{stroke-dashoffset:-21}}
+@media(prefers-reduced-motion:reduce){.traj-anim{animation:none}}
 .letra{width:22px;height:22px;border-radius:50%;background:#1b1f27;border:2px solid #E69F00;color:#fff;font:800 11px/18px Inter;text-align:center}
 .selo-casa{white-space:nowrap;font:800 10px Inter;color:var(--pos);border:1px solid var(--pos);border-radius:999px;padding:0 6px;margin-left:6px}
-@media(max-width:1100px){.pdgrid{grid-template-columns:1fr}.pdgrid>div:last-child{position:static}.faixaest{grid-template-columns:repeat(3,1fr)}#pd-mapa{height:360px}}
-@media(max-width:560px){.faixaest{grid-template-columns:repeat(2,1fr)}.pdhist{grid-template-columns:1fr}}
+@media(max-width:1100px){.pdgrid{grid-template-columns:1fr}.pdgrid>div:last-child{position:static}.faixaest{grid-template-columns:repeat(3,1fr)}#pd-mapa{height:360px;min-height:0}}
+@media(max-width:560px){.faixaest{grid-template-columns:repeat(2,1fr)}.pdhist{grid-template-columns:1fr}.histr.h24 span:not(:nth-child(3n+1)){visibility:hidden}}
 /* região */
 .reg-cab{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin-bottom:12px}
 .reg-cab .uf{font:800 30px Sora;color:var(--strong)}
@@ -546,17 +561,18 @@ body[data-theme="light"] .pl-t thead tr.n2 th{color:#000}
 
 <!-- =================== Padrões de placa =================== -->
 <section id="v-padroes" class="oculto">
-  <div class="glass"><div class="ctitle">Padrões de placa — padrões de circulação <span class="muted" id="pd-ate"></span><button class="hbtn" data-h="h-pd">ⓘ</button></div>
+  <div class="glass"><div class="ctitle">Padrões de placa — padrões de circulação <span class="muted" id="pd-ate"></span><button class="hbtn" data-h="h-pd">ⓘ</button><button class="hbtn" id="pd-csv">CSV</button></div>
     <p class="desc">O que se repetiu nas capturas de placa por câmera nos últimos 60 dias. Descreve o histórico; não é previsão.</p>
-    <div class="help" id="h-pd"><b>Como ler:</b> as capturas de cada veículo são agrupadas em células de ~330 m. O <b>ponto principal</b> é a célula onde ele passou em mais dias diferentes: 6 dias ou mais = padrão observado; 4 a 5 = em formação; 1 a 3 = aprendendo (o mapa mostra a área por onde ele andou). As letras ordenam os pontos repetidos pelo horário típico. "Perto de casa" = o ponto principal tem o mesmo prefixo de CEP (5 dígitos) do endereço residencial informado pelo banco. Os filtros do topo valem para esta aba.</div>
+    <div class="help" id="h-pd"><b>Como ler:</b> as capturas de cada veículo são agrupadas em células de ~330 m. O <b>ponto principal</b> é a célula onde ele passou em mais dias diferentes: 6 dias ou mais = padrão observado; 4 a 5 = em formação; 1 a 3 = aprendendo (o mapa mostra a área por onde ele andou). As letras ordenam pelo horário típico os pontos vistos em 2 dias ou mais. <b>Trajetos</b> são capturas seguidas em pontos diferentes, com até 3 h entre elas; a linha liga as câmeras, não segue as ruas. "Perto de casa" = o ponto principal tem o mesmo prefixo de CEP (5 dígitos) do endereço residencial informado pelo banco. Os filtros do topo valem para esta aba.</div>
     <div class="trac oculto" id="pd-aviso" role="status"></div>
     <div class="faixaest" id="pd-est" role="group" aria-label="Estados"></div>
     <div class="pdgrid">
       <div><input id="pd-busca" type="search" placeholder="Buscar pasta ou placa" aria-label="Buscar pasta ou placa">
         <div id="pd-lista"></div><div class="pag" id="pd-pag"></div><div id="pd-det"></div></div>
-      <div><div id="pd-mapa" role="region" aria-label="Mapa das capturas"></div>
+      <div><div id="pd-caixa"><div id="pd-mapa" role="region" aria-label="Mapa das capturas"></div>
+        <button class="chip" id="pd-tela-cheia" aria-label="Mapa em tela cheia" title="Tela cheia">⛶</button></div>
         <div class="trac oculto" id="pd-mapa-aviso" style="margin-top:8px"></div>
-        <p class="regra oculto" id="pd-leg-seq">Ordem habitual — pontos de dias diferentes, ligados por linha reta entre câmeras; não é rota pelas ruas.</p></div>
+        <div class="pd-leg" id="pd-legenda"></div></div>
     </div></div>
 </section>
 
@@ -1574,7 +1590,12 @@ function renderTabelasAgenda(R) {
 
 
 /* ======================= Padrões de placa ======================= */
-const PD = {estados: new Set(A.ESTADOS_PADRAO), busca: "", pag: 0, sel: null, mapa: null, camada: null, tilesFalharam: false};
+const PD = {estados: new Set(A.ESTADOS_PADRAO), busca: "", pag: 0, sel: null, traj: null, camTraj: [], mapa: null, camada: null, svg: null, cheia: false, tilesFalharam: false};
+// trajetos: cor pelo período da saída (manhã 5–12h, tarde 12–18h, noite 18–5h)
+const periodo = h => (h >= 5 && h < 12 ? 0 : h >= 12 && h < 18 ? 1 : 2);
+const COR_PERIODO = ["#22d3ee", "#c084fc", "#a3e635"], NOME_PERIODO = ["manhã", "tarde", "noite"];
+const faixaTxt = h => `${h}h–${(h + 2) % 24}h`;
+const LEG_TRAJ = `${COR_PERIODO.map((c, k) => `<span><i style="background:${c}"></i>saída de ${NOME_PERIODO[k]}</span>`).join("")}<p>Linha grossa = trajeto repetido em mais dias; pontilhada = visto 1 dia. Liga as câmeras: não é o caminho pelas ruas.</p>`;
 const POR_PAG = 40;
 let PL, PL_CARGA;   // placas.json: undefined = ainda não carregado; null = indisponível; PL_CARGA = a busca em andamento (uma só)
 function carregarPlacas() {
@@ -1607,8 +1628,8 @@ function renderPadroes(R) {
   const nPag = Math.max(1, Math.ceil(lista.length / POR_PAG)); PD.pag = Math.min(PD.pag, nPag - 1);
   const pag = lista.slice(PD.pag * POR_PAG, (PD.pag + 1) * POR_PAG);
   trocarHTML($("pd-lista"), !lista.length ? VAZIO(PD.busca ? "Nenhum contrato encontrado nos estados selecionados — selecione outros estados na faixa acima para procurar em Sem captura/Sem placa." : "Nenhum contrato nos estados e filtros selecionados.")
-    : `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>Pasta</th><th style="text-align:left">Etapa</th><th style="text-align:left">Estado</th><th style="text-align:left">Ponto principal</th><th>Última passagem</th></tr></thead><tbody>` +
-      pag.map(x => `<tr class="pdl${x.i === PD.sel ? " sel" : ""}" tabindex="0" data-pdsel="${x.i}"><td>${esc(x.pasta)}</td><td class="esq">${esc(x.etapa)}</td><td class="esq">${tagEstado(x.estado)}${x.dias ? ` <small class="muted" style="white-space:nowrap">${x.dias} ${x.dias === 1 ? "dia" : "dias"}</small>` : ""}</td><td class="esq">${esc(x.principal || "—")}</td><td>${x.ult !== null ? quandoBR(x.ult) : "—"}</td></tr>`).join("") + `</tbody></table></div>`);
+    : `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>Pasta</th><th style="text-align:left">Etapa</th><th style="text-align:left">Estado</th><th title="Capturas da placa nos últimos 60 dias (no ponto principal: dica da célula)">Passagens</th><th style="text-align:left">Ponto principal</th><th>Última passagem</th></tr></thead><tbody>` +
+      pag.map(x => `<tr class="pdl${x.i === PD.sel ? " sel" : ""}" tabindex="0" data-pdsel="${x.i}"><td>${esc(x.pasta)}</td><td class="esq">${esc(x.etapa)}</td><td class="esq">${tagEstado(x.estado)}${x.dias ? ` <small class="muted" style="white-space:nowrap">${x.dias} ${x.dias === 1 ? "dia" : "dias"}</small>` : ""}</td><td${x.passagens_pp !== null ? ` title="${x.passagens_pp} no ponto principal"` : ""}>${x.passagens !== null ? int(x.passagens) : "—"}</td><td class="esq">${esc(x.principal || "—")}</td><td>${x.ult !== null ? quandoBR(x.ult) : "—"}</td></tr>`).join("") + `</tbody></table></div>`);
   $("pd-pag").innerHTML = lista.length ? `<button class="chip" data-pdpag="-1" ${PD.pag ? "" : "disabled"} aria-label="página anterior">‹</button> ${PD.pag + 1} de ${nPag} · ${int(lista.length)} contratos <button class="chip" data-pdpag="1" ${PD.pag < nPag - 1 ? "" : "disabled"} aria-label="próxima página">›</button>` : "";
   // o callback lê a lista do momento em que o arquivo chega, não a deste render (cliques durante a carga)
   carregarPlacas().then(() => { if (S.aba === "padroes") { renderDetalhe(PD.lista); desenharMapa(PD.lista); } });
@@ -1629,10 +1650,14 @@ function renderDetalhe(lista) {
   const principal = pp ? bloco("Ponto principal", `<div>${esc(endTxt(E[pp[7]]))}</div><div class="muted">Passou em <b>${pp[3]}</b> ${pp[3] === 1 ? "dia" : "dias diferentes"} (${pp[4]} ${pp[4] === 1 ? "passagem" : "passagens"}) · costuma aparecer <b>${esc(pp[5])}</b> · última passagem ${quandoBR(pp[6])}</div>`)
     : bloco("Última captura conhecida", `<div>${esc(endTxt(E[d.ultima.e]))}</div><div class="muted">${quandoBR(d.ultima.q)}</div>`);
   const area = d.area ? bloco("Área onde foi visto", `<div>${d.area.vertices.length === 1 ? "Um único local (raio de 0,3 km)." : `Capturas espalhadas por cerca de ${f2.format(d.area.km)} km. A área diminui conforme as passagens se repetem.`}</div>`) : "";
-  const hist = (vals, rot) => { const mx = Math.max(1, ...vals); return `<div class="hist">${vals.map((v, j) => `<i style="height:${v / mx * 100}%" title="${rot[j]}: ${v}"></i>`).join("")}</div><div class="histr">${rot.map((r, j) => `<span>${j % (rot.length > 7 ? 3 : 1) ? "" : r}</span>`).join("")}</div>`; };
+  const hist = (vals, rot) => { const mx = Math.max(1, ...vals); return `<div class="hist">${vals.map((v, j) => `<i style="height:${v / mx * 100}%" title="${rot[j]}: ${v}"></i>`).join("")}</div><div class="histr${rot.length > 7 ? " h24" : ""}">${rot.map(r => `<span>${r}</span>`).join("")}</div>`; };
+  const ponta = q => { const e = E[q[7]] || []; return `<b>${q[0] ? q[0] + " " : ""}${esc(e[2] || e[3] || "local sem nome")}</b>`; };
+  const nRec = d.trajetos.filter(t => t[7]).length;
+  const traj = d.trajetos.length ? bloco("Trajetos observados", `<div>${nRec ? `<b>${nRec} ${nRec === 1 ? "trajeto se repetiu" : "trajetos se repetiram"} em dias diferentes</b>` : "Nenhum trajeto se repetiu ainda"} (capturas seguidas com até 3 h entre elas). Clique para ver no mapa.</div>` +
+    `<table class="t traj" id="pd-trajetos"><tbody>${d.trajetos.map((t, k) => `<tr class="${PD.traj === k ? "on" : ""}" tabindex="0" data-pdtraj="${k}"><td class="esq"><span class="bol" style="background:${COR_PERIODO[periodo(t[5])]}"></span>${ponta(d.pontos[t[0]])} → ${ponta(d.pontos[t[1]])}</td><td>${t[2]} ${t[2] === 1 ? "dia" : "dias"}</td><td>${faixaTxt(t[5])}</td><td>~${t[4]} min</td></tr>`).join("")}</tbody></table>`) : "";
   const sem = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"], hrs = Array.from({length: 24}, (_, h) => h + "h");
   const ult = d.ultimas.map(([q, l]) => `<tr><td>${quandoBR(q)}</td><td class="esq">${esc(PL.locais[l])}</td></tr>`).join("");
-  trocarHTML(el, cab + principal + (pp ? bloco("Ordem habitual pelo horário", `<div>${esc(d.sequencia || "Ainda sem dois pontos repetidos para ordenar.")}</div>`) : "") + area +
+  trocarHTML(el, cab + principal + (d.sequencia ? bloco("Ordem habitual pelo horário", `<div>${esc(d.sequencia)}</div>`) : "") + traj + area +
     (d.semana.some(Boolean) ? `<div class="pdbloco pdhist"><div><span class="lb">Dias da semana</span>${hist(d.semana, sem)}</div><div><span class="lb">Horário</span>${hist(d.horas, hrs)}</div></div>` : "") +
     bancoH + bloco("Últimas capturas", `<div class="tblwrap"><table class="t"><thead><tr><th>Quando</th><th style="text-align:left">Local</th></tr></thead><tbody>${ult}</tbody></table></div>`));
 }
@@ -1644,21 +1669,24 @@ function iniciarMapaPd() {
   tiles.addTo(PD.mapa);
   PD.mapa.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
   PD.camada = L.layerGroup().addTo(PD.mapa);
+  PD.svg = L.svg({padding: .5});            // trajetos em SVG (animação do traço); o resto segue em canvas
   return PD.mapa;
 }
 function desenharMapa(lista) {
   if (typeof L === "undefined") { $("pd-mapa-aviso").textContent = "Mapa indisponível."; mostrar("pd-mapa-aviso", true); return; }
-  const m = iniciarMapaPd(); m.invalidateSize(); PD.camada.clearLayers(); mostrar("pd-leg-seq", false);
+  const m = iniciarMapaPd(); m.invalidateSize(); PD.camada.clearLayers(); PD.camTraj = []; $("pd-legenda").innerHTML = "";
   const det = detalhes(A.cargaK(D, S.agora)); if (!det) return;
-  const pts = [];
+  const pts = [], n = {};
   if (PD.sel === null) {
     for (const x of lista) {
       const d = det.get(x.i); if (!d) continue;
       const pp = d.pontos.find(q => q[8]), ll = pp ? [pp[1], pp[2]] : [d.ultima.lat, d.ultima.lon];
-      const c = L.circleMarker(ll, {radius: 6, color: COR_ESTADO[x.estado], fillColor: COR_ESTADO[x.estado], fillOpacity: .75, weight: 1})
+      const c = L.circleMarker(ll, {radius: 5, color: "rgba(0,0,0,.55)", fillColor: COR_ESTADO[x.estado], fillOpacity: .9, weight: 1})
         .bindTooltip(`pasta ${esc(x.pasta)} · ${esc(x.principal || PL.locais[d.ultimas[0][1]])}`).on("click", () => selecionarPd(x.i));
-      c.addTo(PD.camada); pts.push(ll);
+      c.addTo(PD.camada); pts.push(ll); n[x.estado] = (n[x.estado] || 0) + 1;
     }
+    $("pd-legenda").innerHTML = D.placas.estados.filter(e => n[e]).map(e => `<span><i class="bol" style="background:${COR_ESTADO[e]}"></i>${ROT_ESTADO[e]} (${int(n[e])})</span>`).join("") +
+      (pts.length ? "<p>Ponto = ponto principal da placa (sem ponto nos 60 dias: a última captura). Clique num ponto para abrir a pasta.</p>" : "");
     if (pts.length) m.fitBounds(pts, {maxZoom: 13, padding: [20, 20]});
     return;
   }
@@ -1673,16 +1701,70 @@ function desenharMapa(lista) {
   }
   for (const q of d.pontos) {
     L.circleMarker([q[1], q[2]], {radius: 5 + Math.min(q[3], 10) * 1.5, color: cor, fillColor: cor, fillOpacity: q[0] ? .8 : .35, opacity: q[0] ? .9 : .4, weight: 1})
-      .bindTooltip(`${q[0] ? q[0] + " · " : ""}${esc(endTxt(PL.enderecos[q[7]]))} · ${q[3]} ${q[3] === 1 ? "dia" : "dias"}, ${esc(q[5])}`).addTo(PD.camada);
+      .bindTooltip(`${q[0] ? q[0] + " · " : ""}${esc(localTxt(PL.enderecos[q[7]]))} · ${q[3]} ${q[3] === 1 ? "dia" : "dias"}, ${q[4]} ${q[4] === 1 ? "passagem" : "passagens"}, costuma ${esc(q[5])}`).addTo(PD.camada);
     pts.push([q[1], q[2]]);
   }
   const seq = d.pontos.filter(q => q[0]).sort((a, b) => (a[0] < b[0] ? -1 : 1));
-  if (seq.length >= 2) { L.polyline(seq.map(q => [q[1], q[2]]), {color: "#E69F00", weight: 2, dashArray: "6 6"}).addTo(PD.camada); mostrar("pd-leg-seq", true); }
+  if (d.trajetos.length) { desenharTrajetos(m, d); $("pd-legenda").innerHTML = LEG_TRAJ; }
+  else if (seq.length >= 2) { L.polyline(seq.map(q => [q[1], q[2]]), {color: cor, weight: 2, dashArray: "6 6"}).addTo(PD.camada);
+    $("pd-legenda").innerHTML = "<p>Ordem habitual — pontos de dias diferentes, ligados por linha reta entre câmeras; não é rota pelas ruas.</p>"; }
   for (const q of seq) L.marker([q[1], q[2]], {icon: L.divIcon({className: "", html: `<div class="letra">${q[0]}</div>`, iconSize: [22, 22], iconAnchor: [11, 11]}), keyboard: false}).addTo(PD.camada);
   if (!d.pontos.length) { L.circleMarker([d.ultima.lat, d.ultima.lon], {radius: 7, color: cor, fillColor: cor, fillOpacity: .8}).addTo(PD.camada); pts.push([d.ultima.lat, d.ultima.lon]); }
   if (pts.length) m.fitBounds(pts, {maxZoom: 15, padding: [30, 30]});
 }
-function selecionarPd(i) { PD.sel = PD.sel === i ? null : i; renderPadroes(S.R); }
+function selecionarPd(i) { PD.sel = PD.sel === i ? null : i; PD.traj = null; renderPadroes(S.R); }
+const localTxt = e => { if (!e) return "local não informado"; const cid = [e[3], e[4]].filter(Boolean).join("/"); return [e[2], cid].filter(Boolean).join(", ") || "local não informado"; };
+// curva Bézier quadrática na projeção do mapa (controle a 22% na perpendicular: ida e volta ficam em lados opostos) e a seta a 62%
+function curvaTraj(m, a, b) {
+  const z = 16, p0 = m.project(a, z), p2 = m.project(b, z), dx = p2.x - p0.x, dy = p2.y - p0.y;
+  const c = L.point((p0.x + p2.x) / 2 - dy * .22, (p0.y + p2.y) / 2 + dx * .22);
+  const em = t => L.point((1 - t) ** 2 * p0.x + 2 * (1 - t) * t * c.x + t * t * p2.x, (1 - t) ** 2 * p0.y + 2 * (1 - t) * t * c.y + t * t * p2.y);
+  const t = .62, ang = Math.atan2(2 * (1 - t) * (c.y - p0.y) + 2 * t * (p2.y - c.y), 2 * (1 - t) * (c.x - p0.x) + 2 * t * (p2.x - c.x)) * 180 / Math.PI;
+  return {lls: Array.from({length: 29}, (_, k) => m.unproject(em(k / 28), z)), seta: m.unproject(em(t), z), ang};
+}
+function desenharTrajetos(m, d) {
+  const maxDias = Math.max(...d.trajetos.map(t => t[2]));
+  const ponta = q => { const e = PL.enderecos[q[7]] || []; return `${q[0] ? q[0] + " " : ""}${esc(e[2] || e[3] || "local sem nome")}`; };
+  PD.camTraj = d.trajetos.map(() => null);
+  for (let k = d.trajetos.length - 1; k >= 0; k--) {          // do menos ao mais repetido: o mais repetido fica por cima
+    const t = d.trajetos[k], a = d.pontos[t[0]], b = d.pontos[t[1]], p = periodo(t[5]), cor = COR_PERIODO[p], rec = !!t[7];
+    const cv = curvaTraj(m, [a[1], a[2]], [b[1], b[2]]), op = rec ? .95 : .6;
+    const linha = L.polyline(cv.lls, {renderer: PD.svg, color: cor, opacity: op, weight: rec ? 2.5 + 5 * t[2] / maxDias : 1.5,
+      dashArray: rec ? "12 9" : "2 7", className: rec ? "traj-anim" : "", lineCap: "round"})
+      .bindTooltip(`<b>${ponta(a)} → ${ponta(b)}</b><br>${t[2]} ${t[2] === 1 ? "dia" : "dias"}, ${t[3]} ${t[3] === 1 ? "vez" : "vezes"} · saída costuma ser ${faixaTxt(t[5])} (${NOME_PERIODO[p]})<br>~${t[4]} min entre as câmeras · ${f1.format(t[6])} km em linha reta`, {sticky: true})
+      .addTo(PD.camada);
+    const seta = rec ? L.marker(cv.seta, {interactive: false, keyboard: false, icon: L.divIcon({className: "", iconSize: [20, 20], iconAnchor: [10, 10],
+      html: `<svg width="20" height="20" viewBox="-10 -10 20 20" style="overflow:visible;transform:rotate(${cv.ang}deg)"><path d="M-7-7L9 0-7 7z" fill="${cor}" stroke="#0b1220" stroke-width="1.6" stroke-linejoin="round"/></svg>`})}).addTo(PD.camada) : null;
+    PD.camTraj[k] = {linha, seta, op, lls: cv.lls};
+  }
+  aplicarTraj(false);
+}
+function aplicarTraj(enquadrar) {
+  PD.camTraj.forEach((c, k) => { if (!c) return; const vis = PD.traj === null || PD.traj === k;
+    c.linha.setStyle({opacity: vis ? c.op : .12}); if (c.seta) c.seta.setOpacity(vis ? 1 : .12); });
+  const c = PD.traj !== null && PD.camTraj[PD.traj];
+  if (c) { c.linha.bringToFront(); if (enquadrar) PD.mapa.fitBounds(c.lls, {padding: [60, 60], maxZoom: 16}); }
+}
+function destacarTraj(k) {
+  PD.traj = PD.traj === k ? null : k;
+  QS("#pd-trajetos [data-pdtraj]").forEach(tr => tr.classList.toggle("on", +tr.dataset.pdtraj === PD.traj));
+  aplicarTraj(true);
+}
+function telaCheiaPd(on) {
+  // o card tem backdrop-filter, que prende position:fixed a ele: em tela cheia o mapa vai para o body e depois volta
+  const cx = $("pd-caixa");
+  if (on && !PD.cheia) { PD.lugar = [cx.parentNode, cx.nextSibling]; document.body.appendChild(cx); }
+  else if (!on && PD.cheia) PD.lugar[0].insertBefore(cx, PD.lugar[1]);
+  PD.cheia = on; cx.classList.toggle("cheia", on);
+  const b = $("pd-tela-cheia"); b.textContent = on ? "✕" : "⛶"; b.setAttribute("aria-label", on ? "Fechar tela cheia" : "Mapa em tela cheia"); b.title = on ? "Fechar (Esc)" : "Tela cheia";
+  if (PD.mapa) PD.mapa.invalidateSize();
+}
+async function csvPadroesPd() {
+  const pl = await carregarPlacas(); if (!pl) return;
+  const pub = pubAtual(), rows = A.filtrar(A.linhas(D, pub.foto), S.f, D);
+  const out = Exportar.csvPadroes(pacotePlacas(rows, pl, PD.lista), HOJE);
+  baixar(out.nome, out.texto, "text/csv;charset=utf-8");
+}
 
 /* ======================= exportação ======================= */
 let BD;   // undefined = ainda não carregado; null = indisponível (arquivo aberto sem servidor)
@@ -1694,6 +1776,12 @@ async function carregarBD() {
 function baixar(nome, conteudo, tipo) {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([conteudo], {type: tipo})); a.download = nome;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+function pacotePlacas(rows, pl, lista) {
+  const k = A.cargaK(D, S.agora), est = A.placasEstado(D, k), det = detalhes(k), resumo = {}, detalhe = {}, banco = {};
+  for (const r of rows) { if (est.has(r.i)) resumo[r.i] = est.get(r.i); if (det.has(r.i)) detalhe[r.i] = det.get(r.i); if (pl.banco[r.i]) banco[r.i] = pl.banco[r.i]; }
+  return {agora_min: A.minutosAgora(S.agora), acao: D.ordens.acao, rotulos: D.placas.rotulos, local: D.placas.dic.local,
+    enderecos: pl.enderecos, banco, resumo, detalhe, lista, placa: D.pastas.placa};
 }
 function iniciarExportacao() {
   document.addEventListener("click", ev => {
@@ -1710,13 +1798,7 @@ function iniciarExportacao() {
       let placas;   // sem fonte de placas: as abas não saem; sem o placas.json (arquivo local): aviso nas abas
       if (D.placas) {
         const pl = await carregarPlacas();
-        if (!pl) placas = {indisponivel: true};
-        else {
-          const k = A.cargaK(D, S.agora), est = A.placasEstado(D, k), det = detalhes(k), resumo = {}, detalhe = {}, banco = {};
-          for (const r of rows) { if (est.has(r.i)) resumo[r.i] = est.get(r.i); if (det.has(r.i)) detalhe[r.i] = det.get(r.i); if (pl.banco[r.i]) banco[r.i] = pl.banco[r.i]; }
-          placas = {agora_min: A.minutosAgora(S.agora), acao: D.ordens.acao, rotulos: D.placas.rotulos, local: D.placas.dic.local,
-            enderecos: pl.enderecos, banco, resumo, detalhe, lista: A.listaPadroes(D, S.agora, S.f, D.placas.estados, ""), placa: D.pastas.placa};
-        }
+        placas = pl ? pacotePlacas(rows, pl, A.listaPadroes(D, S.agora, S.f, D.placas.estados, "")) : {indisponivel: true};
       }
       const abas = Exportar.planilhas(S.R, rows, await carregarBD(), S.f, pub, foto, HOJE, placas);
       const wb = XLSX.utils.book_new();
@@ -1742,11 +1824,17 @@ function iniciar() {
     if (pe) { const e = pe.dataset.pdest; if (PD.estados.has(e)) { if (PD.estados.size > 1) PD.estados.delete(e); } else PD.estados.add(e); PD.pag = 0; return renderPadroes(S.R); }
     const pg = ev.target.closest("[data-pdpag]"); if (pg && !pg.disabled) { PD.pag += +pg.dataset.pdpag; return renderPadroes(S.R); }
     const ps = ev.target.closest("[data-pdsel]"); if (ps) return selecionarPd(+ps.dataset.pdsel);
+    const pt = ev.target.closest("[data-pdtraj]"); if (pt) return destacarTraj(+pt.dataset.pdtraj);
     const mp = ev.target.closest("[data-mapa]"); if (mp && !mp.disabled) { S.mapa = mp.dataset.mapa; return renderMapa(S.R); }
     const o = ev.target.closest("[data-ordreg]");
     if (o) { const c2 = o.dataset.ordreg; ORD_REG = ORD_REG.col === c2 ? {col: c2, desc: !ORD_REG.desc} : {col: c2, desc: c2 !== "uf"}; return renderRegiao(S.R); }
   });
   $("pd-busca").oninput = () => { PD.busca = $("pd-busca").value; PD.pag = 0; renderPadroes(S.R); };
+  $("pd-tela-cheia").onclick = () => telaCheiaPd(!PD.cheia);
+  $("pd-csv").onclick = csvPadroesPd;
+  document.addEventListener("keydown", ev => { if (ev.key === "Escape" && PD.cheia) telaCheiaPd(false);
+    const pt = ev.target.closest && ev.target.closest("[data-pdtraj]");
+    if (pt && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); destacarTraj(+pt.dataset.pdtraj); } });
   document.addEventListener("keydown", ev => { const ps = ev.target.closest && ev.target.closest("[data-pdsel]");
     if (ps && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); return selecionarPd(+ps.dataset.pdsel); } });
   document.addEventListener("keydown", ev => { const a = ev.target.closest && ev.target.closest(".advl");

@@ -88,10 +88,29 @@
     "Endereço do banco"];
   const INDISP = "Detalhe das capturas de placa indisponível: abra o painel por um servidor (o arquivo placas.json é carregado à parte).";
 
+  // CSV da aba Padrões: as colunas do Excel sem o endereço do banco, "Costuma aparecer" depois do CEP
+  const CSV_PAD = ["Pasta", "Placa", "Etapa", "Estado", "Dias no ponto principal", "Passagens no ponto principal", "Passagens na janela",
+    "Rua", "Número", "Bairro", "Cidade", "UF", "CEP", "Costuma aparecer", "Última passagem", "Perto de casa (CEP)", "Área das capturas (km)"];
+  const quandoDe = (hoje) => (q) => { const m = ((q % 1440) + 1440) % 1440;
+    return `${addDias(hoje, Math.floor(q / 1440))} ${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+  function linhasPadroes(P, hoje) {
+    const quando = quandoDe(hoje);
+    return P.lista.map((x) => {
+      const d = P.detalhe[x.i], pp = d ? d.pontos.find((q) => q[8]) : null, e = pp ? P.enderecos[pp[7]] : [];
+      return [x.pasta, P.placa[x.i], x.etapa, P.rotulos[x.estado], pp ? pp[3] : null, pp ? pp[4] : null, x.passagens, pp ? pp[5] : null,
+        e[0] ?? null, e[1] ?? null, e[2] ?? null, e[3] ?? null, e[4] ?? null, e[5] ?? null, x.ult !== null ? quando(x.ult) : null,
+        simnao(!!(d && d.perto_de_casa)), d && d.area ? d.area.km : null, P.banco[x.i] ?? null];
+    });
+  }
+  function csvPadroes(P, hoje) {
+    const j = CSV_PAD.map((c) => COLS_PAD.indexOf(c));
+    return { nome: `padroes_placa_${hoje}.csv`, texto: csv(CSV_PAD.map((c) => (c === "Passagens na janela" ? "Passagens na janela (60 dias)" : c)),
+      linhasPadroes(P, hoje).map((l) => j.map((k) => l[k]))) };
+  }
+
   // placas = {agora_min, acao, rotulos, local, enderecos, banco, resumo, detalhe, lista, placa} (montado pelo painel)
   function abasPlacas(rows, bd, P, hoje) {
-    const quando = (q) => { const m = ((q % 1440) + 1440) % 1440;
-      return `${addDias(hoje, Math.floor(q / 1440))} ${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+    const quando = quandoDe(hoje);
     const pos = bd ? new Map(bd.pastas.map((x, j) => [x, j])) : null, idx = bd ? new Map(bd.colunas.map((c, j) => [c, j])) : null;
     const doBD = (i, c) => (pos && pos.has(i) ? bd.valores[pos.get(i)][idx.get(c)] : null);
     const ordem = new Map(P.acao.map((e, n) => [e, n]));
@@ -103,13 +122,7 @@
           r2((P.agora_min - v[1]) / 60), e[0] ?? null, e[1] ?? null, bairro, cid, ufc, e[5] ?? null, d ? d.ultima.lat : null, d ? d.ultima.lon : null,
           simnao(ufc !== null && ufc !== r.uf), d ? d.ultima.empresa : null, "", d ? d.ultima.storage : null] };
     }).sort(porChaves((x) => x.o)).map((x) => x.l);
-    const pad = P.lista.map((x) => {
-      const d = P.detalhe[x.i], pp = d ? d.pontos.find((q) => q[8]) : null, e = pp ? P.enderecos[pp[7]] : [];
-      return [x.pasta, P.placa[x.i], x.etapa, P.rotulos[x.estado], pp ? pp[3] : null, pp ? pp[4] : null, x.passagens, pp ? pp[5] : null,
-        e[0] ?? null, e[1] ?? null, e[2] ?? null, e[3] ?? null, e[4] ?? null, e[5] ?? null, x.ult !== null ? quando(x.ult) : null,
-        simnao(!!(d && d.perto_de_casa)), d && d.area ? d.area.km : null, P.banco[x.i] ?? null];
-    });
-    return { Localizados: [COLS_LOC, ...loc], Padroes: [COLS_PAD, ...pad] };
+    return { Localizados: [COLS_LOC, ...loc], Padroes: [COLS_PAD, ...linhasPadroes(P, hoje)] };
   }
 
   function planilhas(R, rows, bd, filtros, pub, foto, hoje, placas) {
@@ -149,7 +162,7 @@
     return out;
   }
 
-  const E = { csv, csvDoCard, planilhas };
+  const E = { csv, csvDoCard, csvPadroes, planilhas };
   g.Exportar = E;
   if (typeof module !== "undefined" && module.exports) module.exports = E;
 })(typeof window !== "undefined" ? window : globalThis);

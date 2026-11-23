@@ -233,3 +233,14 @@ def test_aba_ba_marcacao(html_gerado):
         assert f'id="{i}"' in html_gerado, i
     assert "VLR PERFORMANCE" in html_gerado and "PERFORMACE" not in html_gerado
     assert "dados do sistema jurídico de" in html_gerado
+
+
+def test_aba_padroes_trajetos_marcacao(html_gerado):
+    pad = html_gerado.split('<section id="v-padroes"')[1].split("</section>")[0]
+    for i in ("pd-tela-cheia", "pd-legenda", "pd-csv"):
+        assert f'id="{i}"' in pad, i
+    assert "pd-trajetos" in html_gerado and "Trajetos observados" in html_gerado
+    assert "Liga as câmeras: não é o caminho pelas ruas." in html_gerado
+    assert "#22d3ee" in html_gerado and "#c084fc" in html_gerado and "#a3e635" in html_gerado
+    assert "Ainda sem dois pontos repetidos" not in html_gerado
+    assert "prefers-reduced-motion" in html_gerado and "grayscale(" in html_gerado

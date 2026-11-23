@@ -190,3 +190,19 @@ def test_sem_placas_sem_abas(node, payload):
 def test_placas_indisponiveis_avisa(node, payload):
     out, _ = _chamar_planilhas(node, payload, {}, {"indisponivel": True})
     assert "indisponível" in out["Localizados"][0][0] and "indisponível" in out["Padroes"][0][0]
+
+
+COLS_CSV_PAD = ["Pasta", "Placa", "Etapa", "Estado", "Dias no ponto principal", "Passagens no ponto principal",
+                "Passagens na janela (60 dias)", "Rua", "Número", "Bairro", "Cidade", "UF", "CEP", "Costuma aparecer",
+                "Última passagem", "Perto de casa (CEP)", "Área das capturas (km)"]
+
+
+def test_csv_da_aba_padroes(node, payload, placas_json):
+    f = {"uf": ["SP"]}
+    pub = next(p for p in payload["publicacoes"] if p["agora"] == "17:05")
+    rows = referencia.filtrar(referencia.linhas(payload, pub["foto"]), f, payload)
+    out = node("csvPadroes", pacote_placas(payload, placas_json, "17:05", f, rows), payload["hoje"])
+    linhas = out["texto"].lstrip("﻿").rstrip("\r\n").split("\r\n")
+    assert out["nome"] == f"padroes_placa_{payload['hoje']}.csv"
+    assert linhas[0].split(";") == COLS_CSV_PAD
+    assert len(linhas) - 1 == len(referencia.lista_padroes(payload, "17:05", f, list(payload["placas"]["estados"]), ""))
