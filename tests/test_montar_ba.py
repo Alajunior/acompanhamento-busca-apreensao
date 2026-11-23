@@ -63,3 +63,7 @@ def test_marcos_e_passagens(ba_json):
 
 def test_tamanho(ba_json):
     assert len(json.dumps(ba_json, ensure_ascii=False, separators=(",", ":")).encode()) < 1_600_000
+
+
+def test_json_estrito_sem_nan(ba_json):
+    json.dumps(ba_json, allow_nan=False)

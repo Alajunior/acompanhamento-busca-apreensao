@@ -180,3 +180,7 @@ def test_tres_tabelas_na_operacao(html_gerado):
 
 def test_index_html_nao_inclui_ba(html_gerado):
     assert "localizadores_info" not in html_gerado     # o ba.json só é baixado ao abrir a aba
+
+
+def test_ba_js_embutido(html_gerado):
+    assert "linhaTempo" in html_gerado and "/*__BA__*/" not in html_gerado

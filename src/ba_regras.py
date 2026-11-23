@@ -429,5 +429,6 @@ def marcos_linha_tempo(mrc: pd.DataFrame, linhas: pd.DataFrame, hoje: date) -> d
                 st, resp = (VEIC_APREENDIDO, la["RESPONSAVEL"].iloc[-1]) if len(la) else (None, None)
             itens.append((real, "APREENDIDO", None, None if st is None or pd.isna(st) else st, resp))
         itens.sort(key=lambda x: (x[0], 99 if x[1] == "APREENDIDO" else (x[2] or 0), _ORDEM_FLUXO[x[1]]))
-        out[pasta] = [[_ORDEM_FLUXO[ev], n, d.isoformat(), st, resp] for d, ev, n, st, resp in itens]
+        out[pasta] = [[_ORDEM_FLUXO[ev], n, d.isoformat(), st, None if resp is None or pd.isna(resp) else resp]
+                      for d, ev, n, st, resp in itens]
     return out

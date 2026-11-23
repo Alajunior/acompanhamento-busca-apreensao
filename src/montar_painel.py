@@ -25,7 +25,8 @@ from src.regra import COLUNAS, EXTINTAS, ORDEM_ACAO, ORDEM_FOLLOW, ORDEM_PROCESS
 RAIZ = Path(__file__).resolve().parent.parent
 MODELO = RAIZ / "src" / "painel.html"
 MAPA = RAIZ / "docs" / "vendor" / "br_uf.json"
-SCRIPTS = {"/*__AGREGAR__*/": RAIZ / "src" / "agregar.js", "/*__EXPORTAR__*/": RAIZ / "src" / "exportar.js"}
+SCRIPTS = {"/*__AGREGAR__*/": RAIZ / "src" / "agregar.js", "/*__EXPORTAR__*/": RAIZ / "src" / "exportar.js",
+           "/*__BA__*/": RAIZ / "src" / "ba.js"}
 DINAMICAS_BD = ("TIPO_AGENDAMENTO", "DATA_AGENDAMENTO", "FASE", "DATA_INSERT")
 _ATRIBUTOS = {"uf": ("UF", None), "carteira": ("CARTEIRA_PRODUTO", "(vazio)"), "adv": ("ADVOGADO_OPERACIONAL", "(sem advogado)"),
               "produto": ("PRODUTO_VEICULO", "(sem produto)"), "comarca": ("COMARCA", "(sem comarca)"), "marca": ("MARCA", None)}

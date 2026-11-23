@@ -116,7 +116,7 @@ def montar_ba(sim: Simulacao, saida: Path) -> dict:
                   "advogado": [[_norm_mes(m), c, _v(q), _v(v)] for m, c, q, v in f.metas_advogado.itertuples(index=False, name=None)]},
         "feriados": sorted(d.isoformat() for d in f.feriados),
     }
-    Path(saida).write_text(json.dumps(ba, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    Path(saida).write_text(json.dumps(ba, ensure_ascii=False, separators=(",", ":"), allow_nan=False), encoding="utf-8")
     return json.loads(json.dumps(ba, ensure_ascii=False))
 
 
