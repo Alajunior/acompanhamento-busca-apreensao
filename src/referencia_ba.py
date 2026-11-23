@@ -453,11 +453,9 @@ def secoes(ba: dict, agora: str, filtros: dict) -> dict:
     apreendidos = [r for r in rc["lista"] if r["DT_APREENSAO"] and (not f["mes"] or r["MES_APREENSAO"] == f["mes"])]
     vis_ap = [r for r in recorte if r["DT_APREENSAO"] and (not f["mes"] or r["MES_APREENSAO"] == f["mes"])]
     mb = _meta_banco(ba, recorte, mes_metas)
-    total = next((l for l in mb["linhas"] if l["chave"] == "TOTAL"), None)
-    meta_total = total["meta_qtd"] if total else None
-    if meta_total is None:
-        meta_total = (_meta_faixas(ba, mes_metas).get("121 A 360", (None,))[0] or 0) + \
-            (_meta_faixas(ba, mes_metas).get("360 A 720", (None,))[0] or 0) + (_meta_faixas(ba, mes_metas).get("> 720", (None,))[0] or 0) or None
+    mf = _meta_faixas(ba, mes_metas)
+    qs = [mf[n][0] for n, _ in FAIXAS if n in mf and mf[n][0] is not None]
+    meta_total = sum(qs) if qs else None
     du_total, du_atual = _du_mes(ba, mes_metas)
     return {
         "localizados": rc["lista_abertos"],
@@ -482,8 +480,7 @@ def linha_tempo(ba: dict, agora: str, filtros: dict, janela: str) -> dict:
     etapas = list(filtros.get("etapa") or []) or list(ABERTAS)
     hoje = _hoje(ba)
     sel = [r for r in rc["recorte"] if r["ETAPA"] in etapas]
-    marcos = {r["PASTA"]: [m for m in ba["marcos"].get(r["PASTA"], []) if m[2] <= hoje.isoformat() or r["ETAPA"] in ABERTAS]
-              for r in sel}
+    marcos = {r["PASTA"]: ba["marcos"].get(r["PASTA"], []) for r in sel}
     if janela == "tudo":
         datas = [m[2] for ms in marcos.values() for m in ms]
         de = min(datas) if datas else hoje.isoformat()
