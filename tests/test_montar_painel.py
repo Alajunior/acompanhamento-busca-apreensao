@@ -244,3 +244,20 @@ def test_aba_padroes_trajetos_marcacao(html_gerado):
     assert "#22d3ee" in html_gerado and "#c084fc" in html_gerado and "#a3e635" in html_gerado
     assert "Ainda sem dois pontos repetidos" not in html_gerado
     assert "prefers-reduced-motion" in html_gerado and "grayscale(" in html_gerado
+
+
+def test_placas_json_tem_apreendidos(tmp_path, payload, cargas, sim):
+    from src.padroes import ESTADOS, apreendidos_da_simulacao, bancos_por_pasta
+    ap = apreendidos_da_simulacao(sim)
+    montar_placas(cargas, bancos_por_pasta(sim), payload, tmp_path / "placas.json", ap)
+    itens = json.loads((tmp_path / "placas.json").read_text("utf-8"))["apreendidos"]
+    assert len(itens) == ap["total"] and all(len(x) == 15 for x in itens)
+    na = [x for x in itens if ESTADOS[x[3]] in ("PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO")]
+    assert len(na) == ap["na_janela"] and all(x[10] is not None and x[9] >= 0 for x in na)
+    assert (tmp_path / "placas.json").stat().st_size < 2.8 * 1024 * 1024
+
+
+def test_card_apreendidos_marcacao(html_gerado):
+    assert 'id="pd-apreendidos"' in html_gerado and "Apreendidos com captura antes" in html_gerado
+    assert "Só os filtros de UF e advogado valem aqui." in html_gerado
+    assert "Nenhuma apreensão com captura da placa nos 60 dias antes, nos filtros de UF e advogado." in html_gerado

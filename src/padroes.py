@@ -341,3 +341,54 @@ def bancos_por_pasta(sim: Simulacao, seed: int = 42) -> dict[str, dict]:
     b = _bancos(enderecos(sim, seed))
     inf = info_pastas(sim)
     return {p: b[c] for p, c in zip(inf["PASTA"], inf["CPF"]) if c in b and b[c] is not None}
+
+
+# ---------- apreendidos com captura antes ----------
+
+COM_CAPTURA = ("PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO")
+
+
+def apreendidos_com_captura(prep: pd.DataFrame, aps: pd.DataFrame) -> dict:
+    """Para cada apreensão (PASTA, PLACA, DT_APREENSAO = data real do fato, UF, ADVOGADO, LOCALIZADOR), o padrão de circulação
+    calculado só com as capturas até o fim do dia da apreensão, como se o "agora" fosse esse instante."""
+    porplaca = {p: g for p, g in prep.groupby("placa_n", sort=False)}
+    itens = []
+    for r in aps.itertuples(index=False):
+        dt, placa = pd.Timestamp(r.DT_APREENSAO).normalize(), normalizar_placa(r.PLACA)
+        it = {"pasta": r.PASTA, "placa": placa, "dt_apreensao": dt, "uf": _txt(r.UF), "advogado": _txt(r.ADVOGADO),
+              "localizador": _txt(r.LOCALIZADOR), "estado": "SEM_CAPTURA" if placa else "SEM_PLACA", "passagens": None,
+              "dias": None, "ultima": None, "dias_antes": None, "lat": None, "lon": None, "local": None, "principal": None,
+              "p_lat": None, "p_lon": None}
+        fim = dt + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+        g = porplaca.get(placa) if placa else None
+        g = None if g is None else g[g["quando"] <= fim]
+        if g is not None and len(g):
+            x = _pasta(g, fim, None)
+            rs, d = x["resumo"], x["detalhe"]
+            pp = next((p for p in d["pontos"] if p["principal"]), None)
+            it |= {"estado": rs["estado"], "passagens": rs["passagens_janela"], "dias": rs["dias"], "ultima": rs["ult"],
+                   "dias_antes": int((dt - rs["ult"].normalize()).days), "lat": d["ultima"]["lat"], "lon": d["ultima"]["lon"],
+                   "local": rotulo_local(d["ultima"]), "principal": rs["principal"],
+                   "p_lat": pp["lat"] if pp else None, "p_lon": pp["lon"] if pp else None}
+        itens.append(it)
+    itens.sort(key=lambda x: (-x["dt_apreensao"].value, x["pasta"]))
+    na = [x for x in itens if x["estado"] in COM_CAPTURA]
+    return {"total": len(itens), "com_placa": sum(x["estado"] != "SEM_PLACA" for x in itens),
+            "com_captura_antes": sum(x["estado"] not in ("SEM_PLACA", "SEM_CAPTURA") for x in itens), "na_janela": len(na),
+            "estados": {e: sum(x["estado"] == e for x in itens) for e in ESTADOS},
+            "mediana_dias": float(np.median([x["dias_antes"] for x in na])) if na else None, "itens": itens}
+
+
+def apreendidos_da_simulacao(sim: Simulacao, seed: int = 42) -> dict:
+    """As apreensões da aba Busca e Apreensão (leitura das 17:05) com a placa pela garantia da pasta."""
+    from dados.ba import fontes_ba
+    from dados.capturas import capturas
+    from src.ba_regras import linhas_pasta, localizadores_de
+    f = fontes_ba(sim)
+    lin = linhas_pasta(f, HOJE + pd.Timedelta(hours=17, minutes=5), localizadores_de(f)[0])
+    ap = lin[lin["ETAPA"] == "Apreendido"]
+    dt = pd.to_datetime(ap["DT_APREENSAO_REAL"]).fillna(pd.to_datetime(ap["DT_APREENSAO"]))
+    placa = sim.garantia.drop_duplicates("CARTEIRA_CONTRATO").set_index("CARTEIRA_CONTRATO")["PLACA"]
+    aps = pd.DataFrame({"PASTA": ap["PASTA"], "PLACA": ap["PASTA"].map(placa), "DT_APREENSAO": dt, "UF": ap["UF"],
+                        "ADVOGADO": ap["ADVOGADO"], "LOCALIZADOR": ap["LOCALIZADOR"]})
+    return apreendidos_com_captura(preparar(capturas(sim, seed)), aps[aps["DT_APREENSAO"].notna()])

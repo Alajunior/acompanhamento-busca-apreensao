@@ -108,6 +108,15 @@
       linhasPadroes(P, hoje).map((l) => j.map((k) => l[k]))) };
   }
 
+  // CSV do card "Apreendidos com captura antes": itens do placas.json (já filtrados por UF e advogado)
+  const CSV_APR = ["Pasta", "Placa", "Data da apreensão", "Estado na apreensão", "Dias no ponto principal",
+    "Passagens na janela antes da apreensão", "Última captura antes", "Dias entre a última captura e a apreensão",
+    "Local da última captura", "Ponto principal", "Advogado", "UF do processo", "Localizador"];
+  function csvApreendidos(itens, estados, rotulos, hoje) {
+    return { nome: `padroes_apreendidos_${hoje}.csv`, texto: csv(CSV_APR, itens.map((x) => [x[0], x[5], x[4], rotulos[estados[x[3]]], x[7], x[6],
+      x[8] ? x[8].replace("T", " ") : null, x[9], x[12], x[13], x[2], x[1], x[14]])) };
+  }
+
   // placas = {agora_min, acao, rotulos, local, enderecos, banco, resumo, detalhe, lista, placa} (montado pelo painel)
   function abasPlacas(rows, bd, P, hoje) {
     const quando = quandoDe(hoje);
@@ -162,7 +171,7 @@
     return out;
   }
 
-  const E = { csv, csvDoCard, csvPadroes, planilhas };
+  const E = { csv, csvDoCard, csvPadroes, csvApreendidos, planilhas };
   g.Exportar = E;
   if (typeof module !== "undefined" && module.exports) module.exports = E;
 })(typeof window !== "undefined" ? window : globalThis);

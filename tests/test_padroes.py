@@ -219,3 +219,45 @@ def test_pasta_do_readme_tem_trajetos(sim):
     assert sum(1 for x in p["detalhe"]["pontos"] if x["letra"]) >= 2
     readme = (Path(__file__).resolve().parent.parent / "README.md").read_text("utf-8")
     assert f"?aba=padroes&pasta={PASTA_README}" in readme and "pasta=7007528" not in readme
+
+
+# ---------- apreendidos com captura antes (estado do padrão na data real da apreensão) ----------
+
+def _aps(*linhas):
+    base = {"PASTA": "P1", "PLACA": "ZZA1B23", "DT_APREENSAO": pd.Timestamp("2026-11-20"), "UF": "SP", "ADVOGADO": "ADV-01",
+            "LOCALIZADOR": "ARARA"}
+    return pd.DataFrame([base | x for x in (linhas or [{}])])
+
+
+def test_estado_na_data_da_apreensao():
+    rows = [A_ | {"CAPTURED": f"2026-11-{d:02d} 08:00"} for d in (10, 12, 14, 16, 18, 20)]
+    rows += [A_ | {"CAPTURED": "2026-11-20 21:00"}, A_ | {"CAPTURED": "2026-11-22 08:00"}]     # a do dia 22 é depois
+    prep = P.preparar(cap_raw(*rows))
+    a18 = P.apreendidos_com_captura(prep, _aps({"DT_APREENSAO": pd.Timestamp("2026-11-18")}))["itens"][0]
+    assert (a18["estado"], a18["dias"], a18["passagens"]) == ("PADRAO_EM_FORMACAO", 5, 5)
+    assert a18["ultima"] == pd.Timestamp("2026-11-18 08:00") and a18["dias_antes"] == 0
+    a20 = P.apreendidos_com_captura(prep, _aps())["itens"][0]
+    assert (a20["estado"], a20["passagens"], a20["ultima"]) == ("PADRAO_OBSERVADO", 7, pd.Timestamp("2026-11-20 21:00"))
+    assert a20["local"] == "CENTRO, SAO PAULO/SP" and a20["principal"] == "CENTRO, SAO PAULO/SP"
+
+
+def test_dias_antes_nunca_negativo():
+    prep = P.preparar(cap_raw(A_ | {"CAPTURED": "2026-11-22 08:00"}, A_ | {"PLATE": "ZZB2C34", "CAPTURED": "2026-08-01 08:00"}))
+    r = P.apreendidos_com_captura(prep, _aps({"DT_APREENSAO": pd.Timestamp("2026-11-25")},
+                                             {"PASTA": "P2"},                                     # só captura depois
+                                             {"PASTA": "P3", "PLACA": "ZZB2C34"},                 # só captura antiga
+                                             {"PASTA": "P4", "PLACA": None}))
+    it = {x["pasta"]: x for x in r["itens"]}
+    assert it["P1"]["dias_antes"] == 3 and it["P1"]["estado"] == "APRENDENDO"
+    assert it["P2"]["estado"] == "SEM_CAPTURA" and it["P2"]["dias_antes"] is None and it["P2"]["ultima"] is None
+    assert it["P3"]["estado"] == "SEM_CAPTURA_RECENTE" and it["P3"]["dias_antes"] > 60
+    assert it["P4"]["estado"] == "SEM_PLACA"
+    assert all(x["dias_antes"] is None or x["dias_antes"] >= 0 for x in r["itens"])
+    assert (r["total"], r["com_placa"], r["com_captura_antes"], r["na_janela"], r["mediana_dias"]) == (4, 3, 2, 1, 3)
+
+
+def test_apreendidos_da_simulacao(sim):
+    r = P.apreendidos_da_simulacao(sim)
+    assert r["total"] > 1000 and r["com_placa"] <= r["total"] and 20 <= r["na_janela"] <= r["com_captura_antes"]
+    na = [x for x in r["itens"] if x["estado"] in COM_CAPTURA]
+    assert len(na) == r["na_janela"] and all(x["dias_antes"] >= 0 and x["ultima"].normalize() <= x["dt_apreensao"] for x in na)

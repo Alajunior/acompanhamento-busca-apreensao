@@ -206,3 +206,18 @@ def test_csv_da_aba_padroes(node, payload, placas_json):
     assert out["nome"] == f"padroes_placa_{payload['hoje']}.csv"
     assert linhas[0].split(";") == COLS_CSV_PAD
     assert len(linhas) - 1 == len(referencia.lista_padroes(payload, "17:05", f, list(payload["placas"]["estados"]), ""))
+
+
+COLS_CSV_APR = ["Pasta", "Placa", "Data da apreensão", "Estado na apreensão", "Dias no ponto principal",
+                "Passagens na janela antes da apreensão", "Última captura antes", "Dias entre a última captura e a apreensão",
+                "Local da última captura", "Ponto principal", "Advogado", "UF do processo", "Localizador"]
+
+
+def test_csv_apreendidos(node, payload):
+    itens = [["7000001", "SP", "ADV-01", 0, "2026-11-20", "ZZA1B23", 7, 6, "2026-11-20T21:00", 0, -23.5, -46.6,
+              "CENTRO, SAO PAULO/SP", "CENTRO, SAO PAULO/SP", "ARARA"]]
+    out = node("csvApreendidos", itens, payload["placas"]["estados"], payload["placas"]["rotulos"], payload["hoje"])
+    linhas = out["texto"].lstrip("\ufeff").rstrip("\r\n").split("\r\n")
+    assert out["nome"] == f"padroes_apreendidos_{payload['hoje']}.csv" and linhas[0].split(";") == COLS_CSV_APR
+    assert linhas[1].split(";")[:4] == ["7000001", "ZZA1B23", "2026-11-20", "Padrão observado"]
+    assert linhas[1].split(";")[6:8] == ["2026-11-20 21:00", "0"]

@@ -154,8 +154,18 @@ def _texto_banco(b: dict) -> str:
                                   f"CEP {b['CEP']}" if b.get("CEP") else "") if x)
 
 
-def montar_placas(cargas: list[dict], bancos: dict[str, dict], payload: dict, saida: Path) -> None:
-    """docs/placas.json: detalhe de cada pasta por carga (delta) e o endereço do banco; carregado sob demanda."""
+def _apreendidos(ap: dict) -> list[list]:
+    """[pasta, uf, adv, estado, dt_apreensao, placa, passagens, dias, ultima, dias_antes, lat, lon, local, principal, localizador]."""
+    est = {e: k for k, e in enumerate(padroes.ESTADOS)}
+    c = lambda v: None if v is None else round(float(v), 5)
+    return [[x["pasta"], x["uf"], x["advogado"], est[x["estado"]], x["dt_apreensao"].strftime("%Y-%m-%d"), x["placa"], x["passagens"],
+             x["dias"], None if x["ultima"] is None else x["ultima"].strftime("%Y-%m-%dT%H:%M"), x["dias_antes"], c(x["lat"]),
+             c(x["lon"]), x["local"], x["principal"], x["localizador"]] for x in ap["itens"]]
+
+
+def montar_placas(cargas: list[dict], bancos: dict[str, dict], payload: dict, saida: Path, apreendidos: dict | None = None) -> None:
+    """docs/placas.json: detalhe de cada pasta por carga (delta), o endereço do banco e as apreensões com o padrão de circulação
+    na data da apreensão (card "Apreendidos com captura antes"); carregado sob demanda."""
     idx = {k: i for i, k in enumerate(payload["pastas"]["pasta"])}
     out, anterior, ends, locs = [], None, {}, {}
     for c in cargas:
@@ -167,7 +177,8 @@ def montar_placas(cargas: list[dict], bancos: dict[str, dict], payload: dict, sa
                         "muda": {str(i): atual[i] for i in sorted(atual) if anterior.get(i) != atual[i]}})
         anterior = atual
     banco = {str(idx[p]): _texto_banco(b) for p, b in bancos.items() if p in idx}
-    saida.write_text(json.dumps({"enderecos": [list(k) for k in ends], "locais": list(locs), "cargas": out, "banco": banco},
+    saida.write_text(json.dumps({"enderecos": [list(k) for k in ends], "locais": list(locs), "cargas": out, "banco": banco,
+                                 "apreendidos": _apreendidos(apreendidos) if apreendidos else []},
                                 ensure_ascii=False, allow_nan=False,
                                 separators=(",", ":")), encoding="utf-8")
 
@@ -236,7 +247,7 @@ def main() -> None:
     payload = montar_payload(linha, cargas)
     montar_html(payload, RAIZ / "docs" / "index.html")
     montar_bd(linha, payload, RAIZ / "docs" / "bd.json")
-    montar_placas(cargas, padroes.bancos_por_pasta(sim), payload, RAIZ / "docs" / "placas.json")
+    montar_placas(cargas, padroes.bancos_por_pasta(sim), payload, RAIZ / "docs" / "placas.json", padroes.apreendidos_da_simulacao(sim))
     montar_ba(sim, RAIZ / "docs" / "ba.json")
     (RAIZ / "docs" / "ba.js").write_bytes((RAIZ / "src" / "ba.js").read_bytes())   # carregado sob demanda junto com o ba.json
     print(" · ".join(f"docs/{a}: {(RAIZ / 'docs' / a).stat().st_size / 1024:.0f} KB" for a in ("index.html", "bd.json", "placas.json", "ba.json")))
