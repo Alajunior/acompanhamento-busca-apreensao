@@ -19,7 +19,7 @@
     let s = String(Math.abs(y));
     if (s.includes("e")) s = Math.abs(y).toFixed(20).replace(/0+$/, "");
     let [int, frac = ""] = s.split(".");
-    if (frac.length <= casas) return y;
+    if (frac.length <= casas) return y || 0;   // nunca -0 (a tela mostraria "-0")
     const resto = frac.slice(casas);
     let sobe = cima ? /[1-9]/.test(resto) : resto[0] >= "5";
     let dig = (int + frac.slice(0, casas)).split("").map(Number);
@@ -30,7 +30,7 @@
     }
     const txt = dig.join("");
     const r = casas ? Number(txt.slice(0, txt.length - casas) + "." + txt.slice(txt.length - casas)) : Number(txt);
-    return neg ? -r : r;
+    return (neg ? -r : r) || 0;
   }
   const arred = (x, c = 0) => arredDec(x, c, false);
   const arredCima = (x, c = 0) => arredDec(x, c, true);

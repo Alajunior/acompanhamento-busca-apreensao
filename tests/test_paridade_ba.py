@@ -60,3 +60,9 @@ def test_paridade_linha_tempo(ba_json, tmp_path):
     for (agora, f, j), res in zip(cs, js):
         d = diferencas(res, ref.linha_tempo(ba_json, agora, f, j))
         assert not d, f"{agora} {f} {j}: " + "; ".join(d[:5])
+
+
+def test_arredondamento_nao_devolve_zero_negativo():
+    js = "const B=require('./src/ba.js');console.log(JSON.stringify([Object.is(B.arred(-0.3),-0),Object.is(B.arred(-0.04,1),-0),Object.is(B.arredCima(-0,0),-0)]))"
+    r = subprocess.run(["node", "-e", js], cwd=RAIZ, capture_output=True, text=True, check=True)
+    assert json.loads(r.stdout) == [False, False, False]      # "-0" na tela e pintado de verde
