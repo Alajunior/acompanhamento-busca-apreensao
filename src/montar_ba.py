@@ -112,8 +112,8 @@ def montar_ba(sim: Simulacao, saida: Path) -> dict:
         "colunas": COLUNAS, "colunas_passagem": COLS_PAS, "resultados": RESULTADOS,
         "base_minutos": BASE_MIN.strftime("%Y-%m-%dT%H:%M"), "cargas": cargas, "passagens": pas_cargas,
         "marcos": marcos_linha_tempo(marcos(f.tarefas[f.tarefas["DATA_INICIO"] <= FIM]), final, HOJE.date()),
-        "metas": {"faixa": [[_norm_mes(m), c, _v(q), _v(v)] for m, c, q, v in f.metas_faixa.itertuples(index=False, name=None)],
-                  "advogado": [[_norm_mes(m), c, _v(q), _v(v)] for m, c, q, v in f.metas_advogado.itertuples(index=False, name=None)]},
+        "metas": {"faixa": [[_norm_mes(m), c, _qtd(q), _v(v)] for m, c, q, v in f.metas_faixa.itertuples(index=False, name=None)],
+                  "advogado": [[_norm_mes(m), c, _qtd(q), _v(v)] for m, c, q, v in f.metas_advogado.itertuples(index=False, name=None)]},
         "feriados": sorted(d.isoformat() for d in f.feriados),
     }
     Path(saida).write_text(json.dumps(ba, ensure_ascii=False, separators=(",", ":"), allow_nan=False), encoding="utf-8")
@@ -123,3 +123,9 @@ def montar_ba(sim: Simulacao, saida: Path) -> dict:
 def _norm_mes(m: str) -> str:
     mm, aa = str(m).split("/")
     return f"{int(mm)}/{aa}"
+
+
+def _qtd(q):
+    """Quantidade de meta como inteiro (a coluna vira decimal no pandas quando tem célula vazia)."""
+    q = _v(q)
+    return None if q is None else int(q)

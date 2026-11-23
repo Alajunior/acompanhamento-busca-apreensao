@@ -67,3 +67,7 @@ def test_tamanho(ba_json):
 
 def test_json_estrito_sem_nan(ba_json):
     json.dumps(ba_json, allow_nan=False)
+
+
+def test_metas_quantidade_inteira(ba_json):
+    assert all(isinstance(m[2], int) for m in ba_json["metas"]["faixa"] + ba_json["metas"]["advogado"] if m[2] is not None)
