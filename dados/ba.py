@@ -25,7 +25,8 @@ LOC = "EM DILIGÊNCIA - VEÍCULO LOCALIZADO"
 APREENSAO = "BEM APREENDIDO"
 FICHA = "ENVIAR FICHA LOCALIZADOR"
 P_LOC_APREENDIDA = 0.88          # apreensões precedidas de localização registrada
-P_LOC_EXPEDIDO = 0.11            # pastas com mandado expedido aberto que ganham localização aberta
+P_LOC_EXPEDIDO = 0.09            # pastas com mandado expedido aberto que ganham localização aberta
+P_LOC_SEM_EXPEDIDO = 0.03        # pastas com liminar, negativo ou requerido aberto que ganham localização aberta
 P_LOC_ENCERRADA = 0.025          # pastas com mandado em 2026, sem apreensão, com localização encerrada
 P_RELOCALIZADA = 0.012           # apreendidas que voltam a ser procuradas
 P_FICHAS = 0.62                  # pastas com liminar/mandado em 2026 que recebem ficha de localizador
@@ -157,6 +158,14 @@ def fontes_ba(sim: Simulacao, seed: int = 7) -> FontesBA:
         if rng.random() < P_LOC_EXPEDIDO:
             ini = _hora(rng, FIM - pd.Timedelta(days=float(rng.uniform(1, 60))))
             novas.append((pasta, LOC, ini, pd.NaT, None))
+    # localizado sem mandado aguardando: liminar deferida, mandado negativo ou requerido em aberto
+    sem_exp = mand.loc[mand["TAREFA"].str.contains("LIMINAR|NEGATIVO|REQUERIDO") & mand["DATA_CONCLUSAO"].isna(), "PASTA"].unique()
+    abertos_set = set(abertos)
+    for pasta in sem_exp:
+        if pasta in apreensoes or pasta in abertos_set or pd.notna(ap.get(pasta)) and ap.get(pasta) <= FIM + pd.Timedelta(days=40):
+            continue
+        if rng.random() < P_LOC_SEM_EXPEDIDO:
+            novas.append((pasta, LOC, _hora(rng, FIM - pd.Timedelta(days=float(rng.uniform(1, 45)))), pd.NaT, None))
     com_mandado = mand["PASTA"].unique()
     for pasta in com_mandado:
         if pasta in apreensoes or rng.random() >= P_LOC_ENCERRADA:
