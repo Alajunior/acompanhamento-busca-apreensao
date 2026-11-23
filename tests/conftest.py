@@ -25,3 +25,9 @@ def cargas(sim):
 @pytest.fixture(scope="session")
 def payload(linha, cargas):
     return montar_payload(linha, cargas)
+
+
+@pytest.fixture(scope="session")
+def ba_fontes(sim):
+    from dados.ba import fontes_ba
+    return fontes_ba(sim)
