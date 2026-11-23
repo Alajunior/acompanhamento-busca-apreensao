@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -182,8 +183,15 @@ def test_index_html_nao_inclui_ba(html_gerado):
     assert "base_minutos\":" not in html_gerado and "\"colunas_passagem\"" not in html_gerado   # o ba.json só é baixado ao abrir a aba
 
 
-def test_ba_js_embutido(html_gerado):
-    assert "linhaTempo" in html_gerado and "/*__BA__*/" not in html_gerado
+def test_ba_js_sob_demanda(html_gerado):
+    """O código da aba Busca e Apreensão vem com o ba.json, só quando a aba abre (o HTML fica abaixo de 1 MB)."""
+    assert "function linhaTempo(" not in html_gerado and "/*__BA__*/" not in html_gerado and '"ba.js"' in html_gerado
+
+
+def test_docs_ba_js_em_dia():
+    raiz = Path(__file__).resolve().parent.parent
+    lf = lambda b: b.replace(b"\r\n", b"\n")
+    assert lf((raiz / "docs" / "ba.js").read_bytes()) == lf((raiz / "src" / "ba.js").read_bytes())
 
 
 def test_aba_ba_marcacao(html_gerado):

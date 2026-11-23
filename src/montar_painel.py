@@ -25,8 +25,7 @@ from src.regra import COLUNAS, EXTINTAS, ORDEM_ACAO, ORDEM_FOLLOW, ORDEM_PROCESS
 RAIZ = Path(__file__).resolve().parent.parent
 MODELO = RAIZ / "src" / "painel.html"
 MAPA = RAIZ / "docs" / "vendor" / "br_uf.json"
-SCRIPTS = {"/*__AGREGAR__*/": RAIZ / "src" / "agregar.js", "/*__EXPORTAR__*/": RAIZ / "src" / "exportar.js",
-           "/*__BA__*/": RAIZ / "src" / "ba.js"}
+SCRIPTS = {"/*__AGREGAR__*/": RAIZ / "src" / "agregar.js", "/*__EXPORTAR__*/": RAIZ / "src" / "exportar.js"}
 DINAMICAS_BD = ("TIPO_AGENDAMENTO", "DATA_AGENDAMENTO", "FASE", "DATA_INSERT")
 _ATRIBUTOS = {"uf": ("UF", None), "carteira": ("CARTEIRA_PRODUTO", "(vazio)"), "adv": ("ADVOGADO_OPERACIONAL", "(sem advogado)"),
               "produto": ("PRODUTO_VEICULO", "(sem produto)"), "comarca": ("COMARCA", "(sem comarca)"), "marca": ("MARCA", None)}
@@ -235,6 +234,7 @@ def main() -> None:
     montar_bd(linha, payload, RAIZ / "docs" / "bd.json")
     montar_placas(cargas, padroes.bancos_por_pasta(sim), payload, RAIZ / "docs" / "placas.json")
     montar_ba(sim, RAIZ / "docs" / "ba.json")
+    (RAIZ / "docs" / "ba.js").write_bytes((RAIZ / "src" / "ba.js").read_bytes())   # carregado sob demanda junto com o ba.json
     print(" · ".join(f"docs/{a}: {(RAIZ / 'docs' / a).stat().st_size / 1024:.0f} KB" for a in ("index.html", "bd.json", "placas.json", "ba.json")))
 
 
