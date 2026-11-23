@@ -279,6 +279,14 @@ def test_lista_padroes_ordem_e_busca():
     assert [x["pasta"] for x in R.lista_padroes(pl, "17:05", {}, list(R.ESTADOS_PADRAO), "zza-1b2")] == ["p2"]
 
 
+def test_lista_padroes_com_passagens():
+    rows = [pasta("p1", "AGUARDANDO LIMINAR"), pasta("p2", "AGUARDANDO LIMINAR")]
+    pl = placas_min(um_dia(rows), {"p1": _cap(0, est="PADRAO_OBSERVADO", dias=8) + [41, 17]}, {"p2": None})
+    L = {x["pasta"]: x for x in R.lista_padroes(pl, "17:05", {}, list(pl["placas"]["estados"]), "")}
+    assert (L["p1"]["passagens"], L["p1"]["passagens_pp"]) == (41, 17)
+    assert (L["p2"]["passagens"], L["p2"]["passagens_pp"]) == (None, None)
+
+
 def test_regiao_e_mapa_localizados():
     rows = [pasta("a", "LIMINAR DEFERIDA"), pasta("b", "LIMINAR DEFERIDA", uf="RJ")]
     pl = placas_min(um_dia(rows), {"a": _cap(0, RJ), "b": _cap(-50000)}, {})

@@ -103,7 +103,8 @@ COLS_LOC = ["Pasta", "Processo", "Etapa", "Tipo de agendamento", "UF do processo
             "Capturas (total)", "Capturas 7 dias", "Capturas 30 dias", "Última captura", "Horas desde a última", "Rua", "Número",
             "Bairro", "Cidade", "UF da captura", "CEP", "Latitude", "Longitude", "Fora da UF do processo",
             "Empresa do monitoramento", "Link da foto", "storage_path"]
-COLS_PAD = ["Pasta", "Placa", "Etapa", "Estado", "Dias no ponto principal", "Passagens no ponto principal", "Costuma aparecer",
+COLS_PAD = ["Pasta", "Placa", "Etapa", "Estado", "Dias no ponto principal", "Passagens no ponto principal", "Passagens na janela",
+            "Costuma aparecer",
             "Rua", "Número", "Bairro", "Cidade", "UF", "CEP", "Última passagem", "Perto de casa (CEP)", "Área das capturas (km)",
             "Endereço do banco"]
 
@@ -168,8 +169,17 @@ def test_padroes_todos_os_estados(node, payload, placas_json):
     assert pad[0] == COLS_PAD and len(pad) - 1 == len(rows)
     estados = {l[3] for l in pad[1:]}
     assert {"Sem captura", "Padrão observado"} <= estados
-    assert {l[14] for l in pad[1:]} <= {"sim", "nao"}
+    assert {l[COLS_PAD.index("Perto de casa (CEP)")] for l in pad[1:]} <= {"sim", "nao"}
     assert list(out)[:7] == ["BD", "Resumo", "Prazos", "Advogados", "Movimentacao", "Localizados", "Padroes"]
+
+
+def test_exportar_padroes_passagens(node, payload, placas_json):
+    f = {"uf": ["SP"]}
+    out, rows = _chamar_planilhas(node, payload, f, lambda rows: pacote_placas(payload, placas_json, "17:05", f, rows))
+    lista = {x["pasta"]: x for x in referencia.lista_padroes(payload, "17:05", f, list(payload["placas"]["estados"]), "")}
+    j = COLS_PAD.index("Passagens na janela")
+    com = [l for l in out["Padroes"][1:] if l[j] is not None]
+    assert len(com) > 50 and all(l[j] == lista[l[0]]["passagens"] and l[j] >= (l[5] or 0) for l in com)
 
 
 def test_sem_placas_sem_abas(node, payload):

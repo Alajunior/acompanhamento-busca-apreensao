@@ -598,6 +598,7 @@ def lista_padroes(payload: dict, agora: str, filtros: dict, estados: list[str], 
         v = est.get(r["i"])
         out.append({"i": r["i"], "pasta": r["pasta"], "etapa": r["fase"], "estado": e, "dias": v[7] if v else None,
                     "principal": pl["dic"]["principal"][v[8]] if v and v[8] is not None else None,
-                    "ult": v[1] if v else None})
+                    "ult": v[1] if v else None, "passagens": v[9] if v else None,
+                    "passagens_pp": v[10] if v else None})
     return sorted(out, key=lambda x: (ordem_acao.get(x["etapa"], 99), ordem_est[x["estado"]],
                                       -x["ult"] if x["ult"] is not None else math.inf, x["pasta"]))

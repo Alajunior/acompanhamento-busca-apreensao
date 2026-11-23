@@ -127,7 +127,8 @@ def test_placas_delta_reconstroi(payload, cargas):
         esp = {idx[p]: v["resumo"] for p, v in c["pastas"].items() if p in idx}
         assert set(dec) == set(esp) and len(dec) > 1000
         for i, r in esp.items():
-            _, ult, l, n, n7, n30, est, dias, p = dec[i]
+            _, ult, l, n, n7, n30, est, dias, p, pj, ppp = dec[i]
+            assert (pj, ppp) == (r["passagens_janela"], r["passagens_principal"])
             assert ult == int((r["ult"] - HOJE).total_seconds() // 60)
             assert tuple(loc[l]) == r["loc"] and (n, n7, n30, dias) == (r["n"], r["n7"], r["n30"], r["dias"])
             assert ESTADOS[est] == r["estado"] and (pp[p] if p is not None else None) == r["principal"]
@@ -143,6 +144,37 @@ def test_placas_json_sem_nan(tmp_path, payload, cargas, sim):
     um = next(iter(d["cargas"][0].values()))
     assert {"ultima", "pontos", "sequencia", "area", "semana", "horas", "ultimas", "perto_de_casa"} <= set(um)
     assert (tmp_path / "placas.json").stat().st_size < 2.5 * 1024 * 1024
+
+
+def test_placas_json_tem_trajetos(tmp_path, payload, cargas, sim):
+    from src.padroes import bancos_por_pasta
+    montar_placas(cargas, bancos_por_pasta(sim), payload, tmp_path / "placas.json")
+    d = json.loads((tmp_path / "placas.json").read_text("utf-8"))
+    ult = cargas[-1]["pastas"]
+    idx = {p: i for i, p in enumerate(payload["pastas"]["pasta"])}
+    com = [v for v in d["cargas"][0].values() if v["trajetos"]]
+    assert len(com) > 100
+    for v in com:
+        assert all(len(t) == 8 and 0 <= t[0] < len(v["pontos"]) and 0 <= t[1] < len(v["pontos"]) and t[0] != t[1]
+                   for t in v["trajetos"])
+    esp = ult["7012366"]["detalhe"]["trajetos"]
+    pasta = _detalhe_em(d, idx["7012366"])
+    assert pasta["trajetos"] == [[t["de"], t["para"], t["dias"], t["passagens"], t["minutos"], t["faixa"], t["km"],
+                                  int(t["recorrente"])] for t in esp]
+    assert (tmp_path / "placas.json").stat().st_size < 2.8 * 1024 * 1024
+
+
+def _detalhe_em(d: dict, i: int) -> dict:
+    """Detalhe da pasta i na última carga do placas.json (aplica os deltas)."""
+    det = {}
+    for c in d["cargas"]:
+        if "sai" in c:
+            for k in c["sai"]:
+                det.pop(str(k), None)
+            det.update(c["muda"])
+        else:
+            det = dict(c)
+    return det[str(i)]
 
 
 def test_payload_sem_placas_igual_fase1(linha, payload):

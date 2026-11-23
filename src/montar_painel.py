@@ -98,7 +98,8 @@ def _delta(anterior: dict | None, atual: dict) -> list | dict:
 
 
 def _placas_payload(cargas: list[dict], idx: dict) -> dict:
-    """Resumo por pasta de cada carga de capturas, em delta como as fotos: [i, ult_min, loc, n, n7, n30, est, dias, pp]."""
+    """Resumo por pasta de cada carga de capturas, em delta como as fotos: [i, ult_min, loc, n, n7, n30, est, dias, pp,
+    passagens_janela, passagens_principal]."""
     local, principal = {}, {}
     est_cod = {e: k for k, e in enumerate(padroes.ESTADOS)}
     saida, anterior = [], None
@@ -111,7 +112,7 @@ def _placas_payload(cargas: list[dict], idx: dict) -> dict:
             loc = local.setdefault(r["loc"], len(local))
             pp = None if r["principal"] is None else principal.setdefault(r["principal"], len(principal))
             atual[idx[pasta]] = [idx[pasta], _minutos(r["ult"]), loc, r["n"], r["n7"], r["n30"], est_cod[r["estado"]],
-                                 r["dias"], pp]
+                                 r["dias"], pp, r["passagens_janela"], r["passagens_principal"]]
         saida.append({"agora": c["agora"], "ate": c["ate"].strftime("%Y-%m-%dT%H:%M") if c["ate"] is not None else None,
                       "falhou": c["falhou"], "estado": _delta(anterior, atual)})
         anterior = atual
@@ -123,7 +124,8 @@ def _placas_payload(cargas: list[dict], idx: dict) -> dict:
 def _detalhe_compacto(d: dict, ends: dict, locs: dict) -> dict:
     """Detalhe da pasta para o placas.json. Instantes em minutos desde 26/11 00:00; endereços e locais por índice:
     ultima = {q, e, lat, lon, empresa, storage}; pontos = [[letra, lat, lon, dias, passagens, faixa, ultima, e, principal]];
-    ultimas = [[q, local]]; area = {vertices, km} | null."""
+    ultimas = [[q, local]]; area = {vertices, km} | null;
+    trajetos = [[i_de, i_para, dias, passagens, minutos, faixa, km, recorrente]] (i_* = índices em pontos)."""
     def e(x: dict) -> int:
         return ends.setdefault(tuple(x[k] for k in ("rua", "numero", "bairro", "cidade", "uf", "cep")), len(ends))
 
@@ -136,6 +138,8 @@ def _detalhe_compacto(d: dict, ends: dict, locs: dict) -> dict:
             "pontos": [[p["letra"], c(p["lat"]), c(p["lon"]), p["dias"], p["passagens"], p["faixa"], _minutos(p["ultima"]),
                         e(p["endereco"]), p["principal"]] for p in d["pontos"]],
             "sequencia": d["sequencia"],
+            "trajetos": [[t["de"], t["para"], t["dias"], t["passagens"], t["minutos"], t["faixa"], t["km"], int(t["recorrente"])]
+                         for t in d["trajetos"]],
             "area": None if d["area"] is None else {"vertices": [[c(a), c(b)] for a, b in d["area"]["vertices"]],
                                                     "km": d["area"]["km"]},
             "semana": d["semana"], "horas": d["horas"],

@@ -447,7 +447,8 @@
       if (!quer.has(e) || (b && !soAlnum(r.pasta).includes(b) && !soAlnum(placa[r.i]).includes(b))) continue;
       const v = est.get(r.i);
       out.push({ i: r.i, pasta: r.pasta, etapa: r.fase, estado: e, dias: v ? v[7] : null,
-        principal: v && v[8] !== null ? P.dic.principal[v[8]] : null, ult: v ? v[1] : null });
+        principal: v && v[8] !== null ? P.dic.principal[v[8]] : null, ult: v ? v[1] : null,
+        passagens: v ? v[9] : null, passagens_pp: v ? v[10] : null });
     }
     return out.sort(porChaves((x) => [oa.has(x.etapa) ? oa.get(x.etapa) : 99, oe.get(x.estado),
       x.ult !== null ? -x.ult : Infinity, x.pasta]));

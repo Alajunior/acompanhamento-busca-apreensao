@@ -83,7 +83,7 @@
     "Capturas (total)", "Capturas 7 dias", "Capturas 30 dias", "Última captura", "Horas desde a última", "Rua", "Número",
     "Bairro", "Cidade", "UF da captura", "CEP", "Latitude", "Longitude", "Fora da UF do processo",
     "Empresa do monitoramento", "Link da foto", "storage_path"];
-  const COLS_PAD = ["Pasta", "Placa", "Etapa", "Estado", "Dias no ponto principal", "Passagens no ponto principal", "Costuma aparecer",
+  const COLS_PAD = ["Pasta", "Placa", "Etapa", "Estado", "Dias no ponto principal", "Passagens no ponto principal", "Passagens na janela", "Costuma aparecer",
     "Rua", "Número", "Bairro", "Cidade", "UF", "CEP", "Última passagem", "Perto de casa (CEP)", "Área das capturas (km)",
     "Endereço do banco"];
   const INDISP = "Detalhe das capturas de placa indisponível: abra o painel por um servidor (o arquivo placas.json é carregado à parte).";
@@ -105,7 +105,7 @@
     }).sort(porChaves((x) => x.o)).map((x) => x.l);
     const pad = P.lista.map((x) => {
       const d = P.detalhe[x.i], pp = d ? d.pontos.find((q) => q[8]) : null, e = pp ? P.enderecos[pp[7]] : [];
-      return [x.pasta, P.placa[x.i], x.etapa, P.rotulos[x.estado], pp ? pp[3] : null, pp ? pp[4] : null, pp ? pp[5] : null,
+      return [x.pasta, P.placa[x.i], x.etapa, P.rotulos[x.estado], pp ? pp[3] : null, pp ? pp[4] : null, x.passagens, pp ? pp[5] : null,
         e[0] ?? null, e[1] ?? null, e[2] ?? null, e[3] ?? null, e[4] ?? null, e[5] ?? null, x.ult !== null ? quando(x.ult) : null,
         simnao(!!(d && d.perto_de_casa)), d && d.area ? d.area.km : null, P.banco[x.i] ?? null];
     });

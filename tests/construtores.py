@@ -46,18 +46,18 @@ def um_dia(rows: list[dict]) -> dict:
 def placas_min(pl: dict, capt: dict[str, list], placas: dict[str, str | None], agora: str = "17:05",
                falhou: bool = False) -> dict:
     """Acrescenta placas a um payload de construtores: capt = {pasta: [ult_min, (cidade, uf, bairro), n, n7, n30,
-    estado, dias, principal]}; placas = {pasta: placa ou None} (pasta ausente = placa "ZZ" + id)."""
+    estado, dias, principal[, passagens_janela, passagens_principal]]}; placas = {pasta: placa ou None} (pasta ausente = placa "ZZ" + id)."""
     from src.padroes import CORES, ESTADOS, ROTULOS, SUGESTAO
     ids = pl["pastas"]["pasta"]
     pl["pastas"]["placa"] = [placas.get(p, ("ZZ" + p.upper() + "00000")[:7]) for p in ids]
     local, princ, linhas = [], [], []
-    for p, (ult, loc, n, n7, n30, est, dias, pp) in sorted(capt.items(), key=lambda x: ids.index(x[0])):
+    for p, (ult, loc, n, n7, n30, est, dias, pp, *pas) in sorted(capt.items(), key=lambda x: ids.index(x[0])):
         if list(loc) not in local:
             local.append(list(loc))
         if pp is not None and pp not in princ:
             princ.append(pp)
         linhas.append([ids.index(p), ult, local.index(list(loc)), n, n7, n30, ESTADOS.index(est), dias,
-                       None if pp is None else princ.index(pp)])
+                       None if pp is None else princ.index(pp), *(pas or [n, None])])
     pl["placas"] = {"dic": {"local": local, "principal": princ}, "estados": list(ESTADOS), "rotulos": ROTULOS,
                     "cores": CORES, "sugestao": SUGESTAO,
                     "cargas": [{"agora": agora, "ate": "2026-11-26T17:00", "falhou": falhou, "estado": linhas}]}
