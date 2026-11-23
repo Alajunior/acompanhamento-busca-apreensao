@@ -301,3 +301,9 @@ def test_versao_muda_com_os_dados(tmp_path, payload):
     assert v1 != v2 and len(v1) == 10
     montar_html(payload, tmp_path / "i.html", v2)
     assert f'const VERSAO = "{v2}";' in (tmp_path / "i.html").read_text(encoding="utf-8")
+
+
+def test_re_render_mantem_o_zoom_do_trajeto_destacado(html_gerado):
+    # trocar página, estado ou filtro redesenha o mapa: com um trajeto destacado, o enquadramento é o dele
+    f = _funcao(html_gerado, "desenharMapa")
+    assert "aplicarTraj(true)" in f and f.index("aplicarTraj(true)") > f.index("desenharTrajetos(m, d)")

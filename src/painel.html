@@ -1744,7 +1744,8 @@ function desenharMapa(lista) {
     $("pd-legenda").innerHTML = "<p>Ordem habitual — pontos de dias diferentes, ligados por linha reta entre câmeras; não é rota pelas ruas.</p>"; }
   for (const q of seq) L.marker([q[1], q[2]], {icon: L.divIcon({className: "", html: `<div class="letra">${q[0]}</div>`, iconSize: [22, 22], iconAnchor: [11, 11]}), keyboard: false}).addTo(PD.camada);
   if (!d.pontos.length) { L.circleMarker([d.ultima.lat, d.ultima.lon], {radius: 7, color: cor, fillColor: cor, fillOpacity: .8}).addTo(PD.camada); pts.push([d.ultima.lat, d.ultima.lon]); }
-  if (pts.length) m.fitBounds(pts, {maxZoom: 15, padding: [30, 30]});
+  if (PD.traj !== null && PD.camTraj[PD.traj]) aplicarTraj(true);   // re-render com trajeto destacado: mantém o enquadramento dele
+  else if (pts.length) m.fitBounds(pts, {maxZoom: 15, padding: [30, 30]});
 }
 function selecionarPd(i) { PD.sel = PD.sel === i ? null : i; PD.traj = null; renderPadroes(S.R); }
 const localTxt = e => { if (!e) return "local não informado"; const cid = [e[3], e[4]].filter(Boolean).join("/"); return [e[2], cid].filter(Boolean).join(", ") || "local não informado"; };
