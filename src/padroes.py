@@ -32,6 +32,8 @@ FALHA = "15:05"                       # leitura de capturas encenada como falha:
 CELULA = 0.003                        # ~330 m
 JANELA_DIAS = 60
 MAX_LETRAS = 8
+MAX_TRAJETOS = 12
+TRAJETO_MAX_H = 3
 RAIO_UNICO_KM = 0.3
 NULOS = {"", "undefined", "null", "none", "nan", "vazio"}
 TEXTOS = ["STREET", "STREET_NUMBER", "POSTAL_CODE", "LOCALITY", "CITY", "STATE", "COMPANY_NAME", "STORAGE_PATH"]
@@ -107,12 +109,34 @@ def estado_de(dias: int | None, templaca_n: bool, tem_captura: bool) -> str:
 
 
 def sequencia(cels: list[dict]) -> list[dict]:
-    pp = principal(cels)
-    if pp is None:
-        return []
-    fortes = sorted([c for c in cels if c["dias"] >= 2 and c is not pp], key=_chave_peso)[: MAX_LETRAS - 1]
-    seq = sorted([pp, *fortes], key=lambda c: (c["faixa"], c["hora_tipica"], c["id"]))
+    """Os 8 pontos de maior peso com 2+ dias, ordenados pelo horário. Principal de 1 dia: nenhum ponto tem letra."""
+    fortes = sorted([c for c in cels if c["dias"] >= 2], key=_chave_peso)[:MAX_LETRAS]
+    seq = sorted(fortes, key=lambda c: (c["faixa"], c["hora_tipica"], c["id"]))
     return [c | {"letra": chr(65 + k)} for k, c in enumerate(seq)]
+
+
+def trajetos(caps: pd.DataFrame, cels: list[dict]) -> list[dict]:
+    """Capturas seguidas (por instante) em células diferentes e com até 3 h entre elas, agrupadas por origem → destino.
+    `de`/`para` são índices em `cels`. Liga as câmeras; não é o caminho pelas ruas."""
+    idx = {c["id"]: i for i, c in enumerate(cels)}
+    grupos: dict[tuple, list] = {}
+    ant = None
+    for r in caps.itertuples(index=False):
+        atual = (celula(r.lat_n, r.lon_n), r.quando)
+        if ant is not None and ant[0] != atual[0] and atual[1] - ant[1] <= pd.Timedelta(hours=TRAJETO_MAX_H):
+            grupos.setdefault((ant[0], atual[0]), []).append((ant[1], atual[1]))
+        ant = atual
+    out = []
+    for (a, b), pares in grupos.items():
+        dias = len({s.normalize() for s, _ in pares})
+        ca, cb = cels[idx[a]], cels[idx[b]]
+        out.append({"de": idx[a], "para": idx[b], "dias": dias, "passagens": len(pares),
+                    "minutos": int(round(float(np.median([(t - s).total_seconds() / 60 for s, t in pares])))),
+                    "faixa": faixa_2h([s.hour for s, _ in pares]),
+                    "km": round(haversine(ca["lat"], ca["lon"], cb["lat"], cb["lon"]), 1), "recorrente": dias >= 2,
+                    "_ids": (a, b)})
+    out.sort(key=lambda t: (not t["recorrente"], -t["dias"], -t["passagens"], t["minutos"], t["_ids"]))
+    return [{k: v for k, v in t.items() if k != "_ids"} for t in out[:MAX_TRAJETOS]]
 
 
 def _local_curto(e: dict) -> str:
@@ -215,7 +239,7 @@ def _pasta(caps: pd.DataFrame, instante: pd.Timestamp, banco: dict | None) -> di
     ult = caps.iloc[-1]
     e_ult = _endereco(ult)
     janela = caps[q > instante - pd.Timedelta(days=JANELA_DIAS)]
-    cels = celulas(janela)
+    cels = sorted(celulas(janela), key=_chave_peso)
     pp = principal(cels)
     est = estado_de(pp["dias"] if pp else None, True, True)
     seq = sequencia(cels)
@@ -231,13 +255,15 @@ def _pasta(caps: pd.DataFrame, instante: pd.Timestamp, banco: dict | None) -> di
     resumo = {"n": len(caps), "n7": int((q > instante - pd.Timedelta(days=7)).sum()),
               "n30": int((q > instante - pd.Timedelta(days=30)).sum()), "ult": ult["quando"],
               "loc": (e_ult["cidade"], e_ult["uf"], e_ult["bairro"]), "estado": est,
-              "dias": pp["dias"] if pp else None, "principal": rotulo_local(pp["endereco"]) if pp else None}
+              "dias": pp["dias"] if pp else None, "principal": rotulo_local(pp["endereco"]) if pp else None,
+              "passagens_janela": len(janela), "passagens_principal": pp["passagens"] if pp else None}
     detalhe = {
         "ultima": e_ult | {"quando": ult["quando"], "lat": float(ult["lat_n"]), "lon": float(ult["lon_n"]),
                            "empresa": ult["COMPANY_NAME"], "storage": ult["STORAGE_PATH"]},
         "pontos": [{"letra": letra.get(c["id"]), "lat": c["lat"], "lon": c["lon"], "dias": c["dias"],
                     "passagens": c["passagens"], "faixa": rotulo_faixa(c["faixa"]), "ultima": c["ultima"],
-                    "endereco": c["endereco"], "principal": c is pp} for c in sorted(cels, key=_chave_peso)],
+                    "endereco": c["endereco"], "principal": c is pp} for c in cels],
+        "trajetos": trajetos(janela, cels),
         "sequencia": texto_sequencia(seq), "area": area, "semana": semana, "horas": horas,
         "ultimas": [[t, rotulo_local(_endereco(r))] for t, r in zip(caps["quando"].iloc[::-1][:20], caps.iloc[::-1][:20].itertuples(index=False))],
         "perto_de_casa": bool(pp and banco and perto_de_casa(pp["endereco"]["cep"], banco.get("CEP"))),

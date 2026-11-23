@@ -34,7 +34,7 @@ Este painel responde às perguntas do jurídico:
 5. **Aba Padrões de placa (BETA):** o que se repetiu nas capturas dos últimos 60 dias, por pasta:
    - seis estados (padrão observado, em formação, aprendendo, sem captura recente, sem captura, sem placa);
    - lista com busca por pasta ou placa e o detalhe da pasta: ponto principal, ordem habitual pelo horário (A → B → C), área, dias da semana, horário e endereço do banco ("perto de casa");
-   - mapa de ruas (OpenStreetMap) com os pontos, a sequência e a área. Link direto: [`?aba=padroes&pasta=7007528`](https://alajunior.github.io/acompanhamento-busca-apreensao/?aba=padroes&pasta=7007528).
+   - mapa de ruas (OpenStreetMap) com os pontos, a sequência e a área. Link direto: [`?aba=padroes&pasta=7012366`](https://alajunior.github.io/acompanhamento-busca-apreensao/?aba=padroes&pasta=7012366).
 6. **Aba Busca e Apreensão:** a planilha do jurídico refeita como painel, para as pastas com localização do veículo ou apreensão desde janeiro:
    - segmentações como no Excel (analista, fase, UF, mês, etapa e localizador), cada uma valendo nas seções em que vale na planilha original;
    - índice lateral e as 12 seções: LOCALIZADOS, VISÃO LOCALIZADOS, MANDADOS, APREENDIDOS, VISÃO APREENDIDOS, COMP. ANALISTA, META BANCO, META RELÓGIO, META ANALISTA, META RELÓGIO ANALISTA, LOCALIZADOR e LINHA DO TEMPO;

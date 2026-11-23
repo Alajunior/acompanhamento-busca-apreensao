@@ -133,3 +133,89 @@ def test_cargas_falha_1505(sim):
     assert cs[4]["falhou"] and not any(c["falhou"] for i, c in enumerate(cs) if i != 4)
     assert cs[4]["pastas"] is cs[3]["pastas"] and cs[4]["ate"] == cs[3]["ate"]
     assert cs[0]["ate"] <= pd.Timestamp("2026-11-26 07:05") < cs[5]["ate"]
+
+
+# ---------- trajetos (capturas seguidas, células diferentes, até 3 h) ----------
+
+A_ = {"LATITUDE": "-23.550000", "LONGITUDE": "-46.630000", "LOCALITY": "CENTRO"}
+B_ = {"LATITUDE": "-23.560000", "LONGITUDE": "-46.640000", "LOCALITY": "VILA NOVA"}
+
+
+def _traj(*rows):
+    prep = P.preparar(cap_raw(*rows))
+    cels = sorted(P.celulas(prep), key=P._chave_peso)
+    return P.trajetos(prep, cels), cels
+
+
+def test_trajeto_recorrente():
+    t, cels = _traj(A_ | {"CAPTURED": "2026-11-20 08:00"}, B_ | {"CAPTURED": "2026-11-20 08:30"},
+                    A_ | {"CAPTURED": "2026-11-21 08:10"}, B_ | {"CAPTURED": "2026-11-21 08:50"})
+    assert len(t) == 1
+    x = t[0]
+    assert cels[x["de"]]["endereco"]["bairro"] == "CENTRO" and cels[x["para"]]["endereco"]["bairro"] == "VILA NOVA"
+    assert (x["dias"], x["passagens"], x["minutos"], x["faixa"], x["recorrente"]) == (2, 2, 35, 8, True)
+    assert x["km"] == round(P.haversine(-23.55, -46.63, -23.56, -46.64), 1)
+
+
+def test_ida_e_volta_sao_trajetos_distintos():
+    t, cels = _traj(A_ | {"CAPTURED": "2026-11-20 08:00"}, B_ | {"CAPTURED": "2026-11-20 08:30"},
+                    A_ | {"CAPTURED": "2026-11-20 09:00"})
+    assert sorted((cels[x["de"]]["endereco"]["bairro"], cels[x["para"]]["endereco"]["bairro"]) for x in t) == \
+        [("CENTRO", "VILA NOVA"), ("VILA NOVA", "CENTRO")]
+    assert not any(x["recorrente"] for x in t)
+
+
+def test_intervalo_maior_que_3h_nao_e_trajeto():
+    assert _traj(A_ | {"CAPTURED": "2026-11-20 08:00"}, B_ | {"CAPTURED": "2026-11-20 11:01"})[0] == []
+    assert len(_traj(A_ | {"CAPTURED": "2026-11-20 08:00"}, B_ | {"CAPTURED": "2026-11-20 11:00"})[0]) == 1
+
+
+def test_mesmo_ponto_nao_e_trajeto():
+    assert _traj(A_ | {"CAPTURED": "2026-11-20 08:00"}, A_ | {"CAPTURED": "2026-11-20 08:20"})[0] == []
+    t, _ = _traj(A_ | {"CAPTURED": "2026-11-20 08:00"}, A_ | {"CAPTURED": "2026-11-20 08:20"},
+                 B_ | {"CAPTURED": "2026-11-20 08:50"})
+    assert len(t) == 1 and t[0]["minutos"] == 30          # conta a partir da captura seguida, não da primeira
+
+
+def test_recorrentes_primeiro_e_limite_de_12():
+    rows = [{"CAPTURED": f"2026-11-20 {6 + k // 6:02d}:{(k % 6) * 10:02d}", "LATITUDE": f"{-23.5 - 0.01 * k:.6f}",
+             "LOCALITY": f"B{k}"} for k in range(14)]
+    rows += [A_ | {"CAPTURED": "2026-11-21 08:00"}, B_ | {"CAPTURED": "2026-11-21 08:30"},
+             A_ | {"CAPTURED": "2026-11-22 08:00"}, B_ | {"CAPTURED": "2026-11-22 08:30"}]
+    t, _ = _traj(*rows)
+    assert len(t) == P.MAX_TRAJETOS == 12 and t[0]["recorrente"] and not any(x["recorrente"] for x in t[1:])
+
+
+def test_principal_de_um_dia_sem_letra():
+    cels = [{"id": (0, k), "dias": 1, "passagens": 1, "ultima": pd.Timestamp("2026-11-20"), "faixa": 8 + k,
+             "hora_tipica": 8.0 + k, "endereco": {}} for k in range(3)]
+    assert P.sequencia(cels) == []
+
+
+def test_pasta_tem_trajetos_e_passagens_na_janela():
+    prep = P.preparar(cap_raw(A_ | {"CAPTURED": "2026-08-01 08:00"}, A_ | {"CAPTURED": "2026-11-20 08:00"},
+                              B_ | {"CAPTURED": "2026-11-20 08:30"}))
+    r = P.carga(prep, info(), END, pd.Timestamp("2026-11-26 09:05"))["P1"]
+    assert r["resumo"]["passagens_janela"] == 2 and r["resumo"]["n"] == 3
+    assert len(r["detalhe"]["trajetos"]) == 1
+
+
+PASTA_README = "7012366"          # a pasta do link direto do README (?aba=padroes&pasta=...)
+COM_CAPTURA = {"PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO"}
+
+
+def test_proporcao_de_trajetos(sim):
+    # calibrada pelo real: 38% das placas com captura na janela têm trajeto, 10% com trajeto repetido
+    ult = [v for v in P.cargas(sim)[-1]["pastas"].values() if v["resumo"]["estado"] in COM_CAPTURA]
+    com = [v for v in ult if v["detalhe"]["trajetos"]]
+    rec = [v for v in com if any(t["recorrente"] for t in v["detalhe"]["trajetos"])]
+    assert 0.33 <= len(com) / len(ult) <= 0.42 and 0.09 <= len(rec) / len(ult) <= 0.16
+
+
+def test_pasta_do_readme_tem_trajetos(sim):
+    from pathlib import Path
+    p = P.cargas(sim)[-1]["pastas"][PASTA_README]
+    assert p["resumo"]["estado"] == "PADRAO_OBSERVADO" and sum(t["recorrente"] for t in p["detalhe"]["trajetos"]) >= 2
+    assert sum(1 for x in p["detalhe"]["pontos"] if x["letra"]) >= 2
+    readme = (Path(__file__).resolve().parent.parent / "README.md").read_text("utf-8")
+    assert f"?aba=padroes&pasta={PASTA_README}" in readme and "pasta=7007528" not in readme
