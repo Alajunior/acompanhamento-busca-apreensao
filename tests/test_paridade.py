@@ -123,3 +123,17 @@ def test_paridade_placas_bordas(tmp_path):
     assert (js[0]["localizado"]["j24"], js[0]["localizado"]["j7"], js[0]["localizado"]["j30"]) == (1, 3, 4)
     sed = js[0]["localizado"]
     assert sed["estados"]["SEM_PLACA"] == 1 and sed["fora_uf"] == 1
+
+
+def test_paridade_apreendidos(sim, tmp_path):
+    """Card "Apreendidos com captura antes": só UF e advogado filtram; contagens e mediana iguais no JS e no Python."""
+    from src.montar_painel import _apreendidos
+    from src.padroes import ESTADOS, apreendidos_da_simulacao
+    itens = _apreendidos(apreendidos_da_simulacao(sim))
+    casos = [{}, {"uf": ["SP"]}, {"uf": ["SP", "RJ"], "adv": ["ADV-03", "ADV-07"]}, {"adv": ["(sem advogado)"]},
+             {"uf": ["AC"], "adv": ["ADV-01"], "etapa": ["MANDADO EXPEDIDO"]}, {"carteira": ["FROTAS 1"]}]
+    js = rodar_node({"itens": itens, "estados": list(ESTADOS)}, casos, tmp_path, "apreendidos")
+    for f, res in zip(casos, js):
+        d = diferencas(res, referencia.apreendidos(itens, list(ESTADOS), f))
+        assert not d, f"{f}: " + "; ".join(d[:5])
+    assert js[0]["na"] and js[3]["total"] > 0 and js[5]["total"] == js[0]["total"]     # carteira não filtra o card

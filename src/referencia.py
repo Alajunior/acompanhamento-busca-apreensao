@@ -582,6 +582,17 @@ def _so_alnum(s: str | None) -> str:
     return "".join(c for c in (s or "").upper() if c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 
+def apreendidos(itens: list[list], estados: list[str], filtros: dict) -> dict:
+    # card "Apreendidos com captura antes": só UF e advogado filtram; itens = linhas de placas.json["apreendidos"]
+    uf, adv = set(filtros.get("uf") or []), set(filtros.get("adv") or [])
+    sel = [x for x in itens if (not uf or x[1] in uf) and (not adv or x[2] in adv)]
+    na = [x for x in sel if estados[x[3]] in ("PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO")]
+    d, m = sorted(x[9] for x in na), len(na) // 2
+    return {"total": len(sel), "com_placa": sum(estados[x[3]] != "SEM_PLACA" for x in sel),
+            "com_captura_antes": sum(estados[x[3]] not in ("SEM_PLACA", "SEM_CAPTURA") for x in sel), "na": na,
+            "mediana": None if not d else d[m] if len(d) % 2 else (d[m - 1] + d[m]) / 2}
+
+
 def lista_padroes(payload: dict, agora: str, filtros: dict, estados: list[str], busca: str) -> list[dict]:
     # lista da aba Padrões: etapa (ação) → estado → última passagem desc → pasta; busca por A-Z0-9 em pasta ou placa
     pub = next(p for p in payload["publicacoes"] if p["agora"] == agora)

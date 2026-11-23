@@ -294,3 +294,18 @@ def test_regiao_e_mapa_localizados():
     assert res["mapa_localizados"] == {"RJ": 1}
     assert res["regioes"]["ufs"][0]["localizados"] == {"d30": 1, "pct": 100.0}
     assert res["regioes"]["brasil"]["localizados"] == {"d30": 1, "pct": 50.0}
+
+
+
+def test_apreendidos_filtro_e_mediana():
+    from src.padroes import ESTADOS
+    e = {n: k for k, n in enumerate(ESTADOS)}
+    it = lambda uf, adv, est, d: ["p", uf, adv, e[est], "2026-11-20", "ZZA1B23", 3, 2, "2026-11-19T08:00", d, 0, 0, "x", "x", None]
+    itens = [it("SP", "ADV-01", "APRENDENDO", 1), it("SP", "(sem advogado)", "PADRAO_OBSERVADO", 4),
+             it("RJ", "ADV-01", "SEM_CAPTURA", None), it("SP", "ADV-02", "SEM_PLACA", None),
+             it("SP", "ADV-02", "SEM_CAPTURA_RECENTE", 70)]
+    r = R.apreendidos(itens, list(ESTADOS), {"uf": ["SP"]})
+    assert (r["total"], r["com_placa"], r["com_captura_antes"], len(r["na"]), r["mediana"]) == (4, 3, 3, 2, 2.5)
+    assert R.apreendidos(itens, list(ESTADOS), {"adv": ["(sem advogado)"]})["total"] == 1
+    z = R.apreendidos(itens, list(ESTADOS), {"uf": ["AC"]})
+    assert (z["total"], z["na"], z["mediana"]) == (0, [], None)

@@ -9,4 +9,5 @@ const casos = JSON.parse(readFileSync(process.argv[3], "utf8"));
 const modo = process.argv[4] || "tudo";   // "lista": casos = [agora, filtros, estados, busca]
 process.stdout.write(JSON.stringify(modo === "lista"
   ? casos.map(([agora, filtros, estados, busca]) => Agregar.listaPadroes(payload, agora, filtros, estados, busca))
+  : modo === "apreendidos" ? casos.map((filtros) => Agregar.apreendidos(payload.itens, payload.estados, filtros))
   : casos.map(([agora, filtros]) => Agregar.tudo(payload, agora, filtros))));

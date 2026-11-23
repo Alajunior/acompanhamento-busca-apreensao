@@ -261,3 +261,24 @@ def test_card_apreendidos_marcacao(html_gerado):
     assert 'id="pd-apreendidos"' in html_gerado and "Apreendidos com captura antes" in html_gerado
     assert "Só os filtros de UF e advogado valem aqui." in html_gerado
     assert "Nenhuma apreensão com captura da placa nos 60 dias antes, nos filtros de UF e advogado." in html_gerado
+
+
+
+def _funcao(html: str, nome: str) -> str:
+    ini = html.index(f"function {nome}(")
+    return html[ini: html.index("\nfunction ", ini + 10)]
+
+
+def test_card_apreendidos_sem_placas_json_nao_reentra(html_gerado):
+    # placas.json indisponível (arquivo local) ou sem a chave: avisa e para, sem pedir de novo em laço
+    f = _funcao(html_gerado, "renderApreendidos")
+    assert "PL === undefined" in f and "Apreensões indisponíveis" in f
+    assert "if (!ap) return" in _funcao(html_gerado, "csvPadroesPd").replace("ap = apreendidosPd(); ", "")
+
+
+def test_trocar_de_aba_sai_da_tela_cheia(html_gerado):
+    assert "telaCheiaPd(false)" in _funcao(html_gerado, "aplicarAba")
+
+
+def test_trajeto_destacado_zera_ao_trocar_a_carga(html_gerado):
+    assert "PD.trajK" in _funcao(html_gerado, "renderPadroes")

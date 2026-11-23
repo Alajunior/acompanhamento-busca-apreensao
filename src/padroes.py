@@ -355,7 +355,7 @@ def apreendidos_com_captura(prep: pd.DataFrame, aps: pd.DataFrame) -> dict:
     itens = []
     for r in aps.itertuples(index=False):
         dt, placa = pd.Timestamp(r.DT_APREENSAO).normalize(), normalizar_placa(r.PLACA)
-        it = {"pasta": r.PASTA, "placa": placa, "dt_apreensao": dt, "uf": _txt(r.UF), "advogado": _txt(r.ADVOGADO),
+        it = {"pasta": r.PASTA, "placa": placa, "dt_apreensao": dt, "uf": _txt(r.UF), "advogado": _txt(r.ADVOGADO) or "(sem advogado)",
               "localizador": _txt(r.LOCALIZADOR), "estado": "SEM_CAPTURA" if placa else "SEM_PLACA", "passagens": None,
               "dias": None, "ultima": None, "dias_antes": None, "lat": None, "lon": None, "local": None, "principal": None,
               "p_lat": None, "p_lon": None}

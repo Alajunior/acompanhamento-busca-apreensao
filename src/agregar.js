@@ -454,8 +454,19 @@
       x.ult !== null ? -x.ult : Infinity, x.pasta]));
   }
 
+  // card "Apreendidos com captura antes": só UF e advogado filtram; itens = linhas de placas.json["apreendidos"]
+  const NA_JANELA = new Set(["PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO"]);
+  function apreendidos(itens, estados, filtros) {
+    const uf = new Set(filtros.uf || []), adv = new Set(filtros.adv || []);
+    const sel = itens.filter((x) => (!uf.size || uf.has(x[1])) && (!adv.size || adv.has(x[2])));
+    const na = sel.filter((x) => NA_JANELA.has(estados[x[3]])), d = na.map((x) => x[9]).sort((a, b) => a - b), m = Math.floor(d.length / 2);
+    return { total: sel.length, com_placa: conta(sel, (x) => estados[x[3]] !== "SEM_PLACA"),
+      com_captura_antes: conta(sel, (x) => estados[x[3]] !== "SEM_PLACA" && estados[x[3]] !== "SEM_CAPTURA"), na,
+      mediana: !d.length ? null : d.length % 2 ? d[m] : (d[m - 1] + d[m]) / 2 };
+  }
+
   const A = { ETAPAS, tudo, linhas, filtrar, kpis, fmtInt, fmtRS, fmtPct0, arred, faseDe, offset,
-    ESTADOS_PADRAO, listaPadroes, placasEstado, estadoPasta, cargaK, minutosAgora, rotuloCaptura, soAlnum };
+    ESTADOS_PADRAO, listaPadroes, apreendidos, placasEstado, estadoPasta, cargaK, minutosAgora, rotuloCaptura, soAlnum };
   g.Agregar = A;
   if (typeof module !== "undefined" && module.exports) module.exports = A;
 })(typeof window !== "undefined" ? window : globalThis);

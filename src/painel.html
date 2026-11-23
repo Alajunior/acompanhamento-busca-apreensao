@@ -743,6 +743,7 @@ function abrirExtra(sim) { mostrar("extra", sim); $("maisFiltros").setAttribute(
 /* ======================= abas e render ======================= */
 function aplicarAba(a) {
   if (!["oper", "gest", "padroes", "planilha"].includes(a) || (a === "padroes" && !D.placas)) a = "oper";
+  if (a !== "padroes" && PD.cheia) telaCheiaPd(false);
   S.aba = a; store.set("bap_aba", a);
   QS("[data-aba]").forEach(b => { b.classList.toggle("on", b.dataset.aba === a); b.setAttribute("aria-selected", b.dataset.aba === a); });
   for (const v of ["oper", "gest", "padroes", "planilha"]) { const el = $("v-" + v); mostrar(el, v === a); if (v === a && !RM) { el.classList.remove("entra"); void el.offsetWidth; el.classList.add("entra"); } }
@@ -1631,8 +1632,9 @@ function renderPadroes(R) {
   mostrar("pd-apr-resumo", PD.apr);
   if (PD.apr) return renderApreendidos(ap);
   $("pd-busca").hidden = false;
+  const kc = A.cargaK(D, S.agora); if (PD.trajK !== kc) { PD.traj = null; PD.trajK = kc; }   // o destaque é a posição na lista da carga
   const lista = PD.lista = A.listaPadroes(D, S.agora, S.f, [...PD.estados], PD.busca);
-  if (PD.sel !== null && !lista.some(x => x.i === PD.sel)) PD.sel = null;
+  if (PD.sel !== null && !lista.some(x => x.i === PD.sel)) { PD.sel = null; PD.traj = null; }
   const nPag = Math.max(1, Math.ceil(lista.length / POR_PAG)); PD.pag = Math.min(PD.pag, nPag - 1);
   const pag = lista.slice(PD.pag * POR_PAG, (PD.pag + 1) * POR_PAG);
   trocarHTML($("pd-lista"), !lista.length ? VAZIO(PD.busca ? "Nenhum contrato encontrado nos estados selecionados — selecione outros estados na faixa acima para procurar em Sem captura/Sem placa." : "Nenhum contrato nos estados e filtros selecionados.")
@@ -1644,21 +1646,16 @@ function renderPadroes(R) {
     const b = $("pd-apreendidos"), ap = apreendidosPd(); if (b && ap) b.querySelector("b").textContent = int(ap.na.length); } });
 }
 // card "Apreendidos com captura antes": só UF e advogado filtram (as apreensões quase nunca estão na publicação)
-const NA_JANELA = new Set(["PADRAO_OBSERVADO", "PADRAO_EM_FORMACAO", "APRENDENDO"]);
-function apreendidosPd() {
-  if (!PL || !PL.apreendidos) return null;
-  const uf = new Set(S.f.uf), adv = new Set(S.f.adv), E = D.placas.estados;
-  const itens = PL.apreendidos.filter(x => (!uf.size || uf.has(x[1])) && (!adv.size || adv.has(x[2])));
-  const na = itens.filter(x => NA_JANELA.has(E[x[3]])), d = na.map(x => x[9]).sort((a, b) => a - b);
-  const med = d.length ? (d.length % 2 ? d[(d.length - 1) / 2] : (d[d.length / 2 - 1] + d[d.length / 2]) / 2) : null;
-  return {itens, na, med, placa: itens.filter(x => E[x[3]] !== "SEM_PLACA").length,
-    antes: itens.filter(x => !["SEM_PLACA", "SEM_CAPTURA"].includes(E[x[3]])).length};
-}
+const apreendidosPd = () => (PL && PL.apreendidos ? A.apreendidos(PL.apreendidos, D.placas.estados, S.f) : null);
 function renderApreendidos(ap) {
   $("pd-busca").hidden = true; $("pd-pag").innerHTML = ""; trocarHTML($("pd-det"), "");
-  if (!ap) { $("pd-apr-resumo").textContent = "Carregando…"; return carregarPlacas().then(() => { if (S.aba === "padroes" && PD.apr) renderPadroes(S.R); }); }
+  if (!ap) {
+    if (PL === undefined) { $("pd-apr-resumo").textContent = "Carregando…"; return carregarPlacas().then(() => { if (S.aba === "padroes" && PD.apr) renderPadroes(S.R); }); }
+    $("pd-apr-resumo").textContent = "Apreensões indisponíveis: o detalhe das capturas não carregou (use o site publicado ou sirva a pasta: python -m http.server --directory docs).";
+    trocarHTML($("pd-lista"), ""); if (PD.camada) PD.camada.clearLayers(); $("pd-legenda").innerHTML = ""; return;
+  }
   const E = D.placas.estados, b = n => `<b>${int(n)}</b>`;
-  $("pd-apr-resumo").innerHTML = `De ${b(ap.itens.length)} apreensões (aba Busca e Apreensão, desde o início da leitura): ${b(ap.placa)} com placa, ${b(ap.antes)} com alguma captura antes e ${b(ap.na.length)} com captura nos 60 dias antes${ap.med !== null ? ` (mediana de ${b(ap.med)} ${ap.med === 1 ? "dia" : "dias"} entre a última captura e a apreensão)` : ""}. Estado = o padrão de circulação na data da apreensão. Só os filtros de UF e advogado valem aqui.`;
+  $("pd-apr-resumo").innerHTML = `De ${b(ap.total)} apreensões (aba Busca e Apreensão, desde o início da leitura): ${b(ap.com_placa)} com placa, ${b(ap.com_captura_antes)} com alguma captura antes e ${b(ap.na.length)} com captura nos 60 dias antes${ap.mediana !== null ? ` (mediana de <b>${ap.mediana % 1 ? f1.format(ap.mediana) : ap.mediana}</b> ${ap.mediana === 1 ? "dia" : "dias"} entre a última captura e a apreensão)` : ""}. Estado = o padrão de circulação na data da apreensão. Só os filtros de UF e advogado valem aqui.`;
   trocarHTML($("pd-lista"), !ap.na.length ? VAZIO("Nenhuma apreensão com captura da placa nos 60 dias antes, nos filtros de UF e advogado.")
     : `<div class="tblwrap" style="max-height:none"><table class="t"><thead><tr><th>Pasta</th><th>Apreensão</th><th style="text-align:left">Estado na apreensão</th><th>Passagens</th><th>Última captura</th><th style="text-align:left">Local da última captura</th><th style="text-align:left">Localizador</th></tr></thead><tbody>` +
       ap.na.map((x, k) => `<tr class="pdl" tabindex="0" data-pdapr="${k}"><td>${esc(x[0])}</td><td>${dBR(x[4])}</td><td class="esq">${tagEstado(E[x[3]])} <small class="muted" style="white-space:nowrap">${x[7]} ${x[7] === 1 ? "dia" : "dias"} no ponto</small></td><td>${int(x[6])}</td><td>${dBR(x[8].slice(0, 10))} ${x[8].slice(11)} <small class="muted">${x[9] ? `(${x[9]} d antes)` : "(no dia)"}</small></td><td class="esq">${esc(x[12])}</td><td class="esq">${esc(x[14] || "—")}</td></tr>`).join("") + `</tbody></table></div>`);
@@ -1794,10 +1791,12 @@ function telaCheiaPd(on) {
   PD.cheia = on; cx.classList.toggle("cheia", on);
   const b = $("pd-tela-cheia"); b.textContent = on ? "✕" : "⛶"; b.setAttribute("aria-label", on ? "Fechar tela cheia" : "Mapa em tela cheia"); b.title = on ? "Fechar (Esc)" : "Tela cheia";
   if (PD.mapa) PD.mapa.invalidateSize();
+  b.focus({preventScroll: true});
 }
 async function csvPadroesPd() {
   const pl = await carregarPlacas(); if (!pl) return;
-  if (PD.apr) { const o = Exportar.csvApreendidos(apreendidosPd().na, D.placas.estados, D.placas.rotulos, HOJE); return baixar(o.nome, o.texto, "text/csv;charset=utf-8"); }
+  if (PD.apr) { const ap = apreendidosPd(); if (!ap) return;
+    const o = Exportar.csvApreendidos(ap.na, D.placas.estados, D.placas.rotulos, HOJE); return baixar(o.nome, o.texto, "text/csv;charset=utf-8"); }
   const pub = pubAtual(), rows = A.filtrar(A.linhas(D, pub.foto), S.f, D);
   const out = Exportar.csvPadroes(pacotePlacas(rows, pl, PD.lista), HOJE);
   baixar(out.nome, out.texto, "text/csv;charset=utf-8");
@@ -1862,7 +1861,7 @@ function iniciar() {
       else if (PD.estados.has(e)) { if (PD.estados.size > 1) PD.estados.delete(e); } else PD.estados.add(e); PD.pag = 0; return renderPadroes(S.R); }
     if (ev.target.closest("#pd-apreendidos")) { PD.apr = !PD.apr; PD.sel = null; PD.pag = 0; return renderPadroes(S.R); }
     const pa = ev.target.closest("[data-pdapr]");
-    if (pa) { const x = apreendidosPd().na[+pa.dataset.pdapr]; QS("[data-pdapr]").forEach(tr => tr.classList.toggle("sel", tr === pa)); return PD.mapa && PD.mapa.setView([x[10], x[11]], 14); }
+    if (pa) { const x = (apreendidosPd() || {na: []}).na[+pa.dataset.pdapr]; if (!x) return; QS("[data-pdapr]").forEach(tr => tr.classList.toggle("sel", tr === pa)); return PD.mapa && PD.mapa.setView([x[10], x[11]], 14); }
     const pg = ev.target.closest("[data-pdpag]"); if (pg && !pg.disabled) { PD.pag += +pg.dataset.pdpag; return renderPadroes(S.R); }
     const ps = ev.target.closest("[data-pdsel]"); if (ps) return selecionarPd(+ps.dataset.pdsel);
     const pt = ev.target.closest("[data-pdtraj]"); if (pt) return destacarTraj(+pt.dataset.pdtraj);

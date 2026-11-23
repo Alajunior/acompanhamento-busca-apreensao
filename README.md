@@ -34,8 +34,8 @@ Este painel responde às perguntas do jurídico:
 5. **Aba Padrões de placa (BETA):** o que se repetiu nas capturas dos últimos 60 dias, por pasta:
    - seis estados (padrão observado, em formação, aprendendo, sem captura recente, sem captura, sem placa);
    - lista com busca por pasta ou placa (com as passagens nos 60 dias) e o detalhe da pasta: ponto principal, ordem habitual pelo horário (A → B → C), **trajetos observados** (capturas seguidas em pontos diferentes, com até 3 h entre elas, e quantos se repetiram em dias diferentes), área, dias da semana, horário e endereço do banco ("perto de casa");
-   - mapa de ruas (OpenStreetMap) com os pontos e os trajetos em curvas com seta, na cor do período da saída (manhã, tarde, noite) e mais grossas quanto mais dias se repetiram; clicar num trajeto da lista destaca ele no mapa. Tela cheia e CSV da aba;
-   - card **Apreendidos com captura antes**: apreensões da aba Busca e Apreensão com a placa vista nos 60 dias antes, e o padrão de circulação que ela tinha na data da apreensão. Link direto: [`?aba=padroes&pasta=7012366`](https://alajunior.github.io/acompanhamento-busca-apreensao/?aba=padroes&pasta=7012366).
+   - mapa de ruas (OpenStreetMap) com os pontos e os trajetos em curvas com seta, na cor do período da saída (manhã, tarde, noite) e mais grossas quanto mais dias se repetiram; clicar num trajeto da lista destaca ele no mapa. Tela cheia e CSV da aba. Link direto: [`?aba=padroes&pasta=7012366`](https://alajunior.github.io/acompanhamento-busca-apreensao/?aba=padroes&pasta=7012366);
+   - card **Apreendidos com captura antes**: apreensões da aba Busca e Apreensão com a placa vista nos 60 dias antes, e o padrão de circulação que ela tinha na data da apreensão.
 6. **Aba Busca e Apreensão:** a planilha do jurídico refeita como painel, para as pastas com localização do veículo ou apreensão desde janeiro:
    - segmentações como no Excel (analista, fase, UF, mês, etapa e localizador), cada uma valendo nas seções em que vale na planilha original;
    - índice lateral e as 12 seções: LOCALIZADOS, VISÃO LOCALIZADOS, MANDADOS, APREENDIDOS, VISÃO APREENDIDOS, COMP. ANALISTA, META BANCO, META RELÓGIO, META ANALISTA, META RELÓGIO ANALISTA, LOCALIZADOR e LINHA DO TEMPO;
@@ -75,7 +75,7 @@ Os cards de análise têm um botão **ⓘ** com o "como ler". São três temas (
 
 No dia simulado são **4.617 processos**, 27% com agendamento vencido e 42 pastas com empate de tarefas no mesmo dia. Nos empates entre AGUARDANDO LIMINAR e EMENDAR INICIAL, a etapa real é EMENDAR em cerca de 87%, a proporção medida no histórico do sistema real: é por isso que a precedência do fluxo põe EMENDAR na frente. A conciliação com a tabela oficial fecha nas três recargas.
 
-Nas placas, às 17:05: 1.557 pastas tiveram o veículo visto em 30 dias (34% das que têm placa), 252 nas últimas 24 horas e 65 fora da UF do processo. Pelos padrões, 647 pastas estão em padrão observado, 366 em formação e 612 aprendendo. Das 1.928 placas com captura nos 60 dias, 717 (37%) têm algum trajeto e 251 (13%) um trajeto que se repetiu em dias diferentes (no painel real, 38% e 10%). Das 1.212 apreensões do ano, 68 tiveram a placa vista nos 60 dias antes, com mediana de 5 dias entre a última captura e a apreensão.
+Nas placas, às 17:05: 1.557 pastas tiveram o veículo visto em 30 dias (34% das que têm placa), 252 nas últimas 24 horas e 65 fora da UF do processo. Pelos padrões, 647 pastas estão em padrão observado, 366 em formação e 612 aprendendo. Na carga inteira de capturas (não só nas pastas da publicação), das 1.928 pastas com captura nos 60 dias, 717 (37%) têm algum trajeto e 251 (13%) um trajeto que se repetiu em dias diferentes (no painel real, 38% e 10%). Das 1.212 apreensões do ano, 68 tiveram a placa vista nos 60 dias antes, com mediana de 5 dias entre a última captura e a apreensão.
 
 Na aba Busca e Apreensão, às 17:05: 1.664 pastas com localização ou apreensão em 2026, sendo 1.212 apreendidas, 193 com mandado expedido aguardando o oficial, 95 localizadas e 164 com a localização encerrada sem apreensão. Foram 118 apreensões em novembro (meta de 117) e 1.227 no ano. As fichas de localizador somam 8.486 passagens em 5.744 pastas; 16,0% delas terminaram em localização (fora as fichas que chegaram com o carro já achado), com mediana de 24,7 dias do envio da ficha.
 
@@ -91,7 +91,7 @@ Na aba Busca e Apreensão, às 17:05: 1.664 pastas com localização ou apreens�
 - **Empate não é erro da regra.** A procedure oficial escolhe ao acaso entre duas tarefas do mesmo dia. Por isso a conciliação deixa essas pastas fora da comparação por tipo, e o painel aplica a precedência do fluxo nelas.
 - **Uma etapa extinta, como na vida real.** EMENDA REALIZADA deixa de existir em 03/11: as tarefas abertas migram para AGUARDANDO LIMINAR. A evolução conta os dias antigos à parte, com aviso, em vez de sumir com eles.
 - **Os estados de falha são encenados.** No painel real, a guarda de volume e a queda para a tabela oficial só aparecem quando acontecem. Aqui eles ficam em horários fixos do "agora", para quem avalia ver as travas funcionando.
-- **Padrões calculados no Python, não no navegador.** Os padrões dependem de geometria (células, envoltória convexa, haversine) e mudam pouco ao longo do dia. O Python calcula cada carga uma vez, e só as pastas cujas capturas mudaram são recalculadas e gravadas. O navegador só conta por filtro, e essas contagens também estão na paridade.
+- **Padrões calculados no Python, não no navegador.** Os padrões dependem de geometria (células, envoltória convexa, haversine) e mudam pouco ao longo do dia. O Python calcula cada carga uma vez, e só as pastas cujas capturas mudaram são recalculadas e gravadas. O navegador só conta por filtro, e essas contagens também estão na paridade, inclusive as do card de apreendidos.
 - **Detalhe sob demanda.** O resumo das placas vai no HTML, porque o card, o mapa e a lista precisam dele já na abertura. O detalhe de cada pasta fica no `placas.json` e só carrega quando a aba abre. Aberto como arquivo local, o painel avisa e o resto continua funcionando.
 - **Limite conhecido da simulação:** os pontos das rotinas são sorteados num raio de 6 km do centro da cidade, sem máscara de terra, e os bairros são nomes genéricos sorteados por ponto. Em cidades litorâneas, alguns pontos caem no mar. Para o que o projeto mostra (a regra dos padrões e a tela), isso não muda nada; para um estudo geográfico, seria o primeiro ajuste.
 - **Descreve, não prevê.** A aba Padrões diz onde o veículo costuma passar, em que horário e que caminhos entre câmeras se repetem, como no painel real. A linha do trajeto liga as câmeras, não segue as ruas (sem serviço de rotas). Não estima probabilidade de apreensão.
@@ -108,7 +108,7 @@ Na aba Busca e Apreensão, às 17:05: 1.664 pastas com localização ou apreens�
 pip install -r requirements.txt
 python -m dados.gerar --verificar      # simulação + conferência do funil (~15 s)
 python -m src.montar_painel            # docs/index.html, docs/bd.json, docs/placas.json e docs/ba.json
-python -m pytest                       # 217 testes (a paridade e a exportação precisam do Node)
+python -m pytest                       # 223 testes (a paridade e a exportação precisam do Node)
 ```
 
 Abra `docs/index.html` no navegador. Para o detalhe da aba Padrões, para a aba Busca e Apreensão e para as abas BD, Localizados e Padroes do `.xlsx`, sirva a pasta (`python -m http.server --directory docs`), porque o navegador não carrega `bd.json`, `placas.json` nem `ba.json` de um arquivo local.
@@ -133,7 +133,7 @@ src/ba.js                    as 12 seções e a linha do tempo da aba Busca e Ap
 src/referencia_ba.py         as mesmas seções em Python, para a paridade
 src/exportar.js              CSV por card e abas do .xlsx
 src/painel.html              o painel (HTML, CSS e JS puro)
-tests/                       217 testes: simulação, capturas, padrões, regra, travas, conciliação, payload, referência, paridade, exportação, guarda de publicação
+tests/                       223 testes: simulação, capturas, padrões, regra, travas, conciliação, payload, referência, paridade, exportação, guarda de publicação
 docs/                        o painel publicado, a base da exportação e as imagens deste README
 ```
 

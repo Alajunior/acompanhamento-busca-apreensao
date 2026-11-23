@@ -219,6 +219,9 @@ def test_pasta_do_readme_tem_trajetos(sim):
     assert sum(1 for x in p["detalhe"]["pontos"] if x["letra"]) >= 2
     readme = (Path(__file__).resolve().parent.parent / "README.md").read_text("utf-8")
     assert f"?aba=padroes&pasta={PASTA_README}" in readme and "pasta=7007528" not in readme
+    mapa = next(l for l in readme.splitlines() if "mapa de ruas (OpenStreetMap)" in l)
+    assert f"pasta={PASTA_README}" in mapa                                  # o link fica no item do mapa e dos trajetos
+    assert "placas com captura nos 60 dias" not in readme
 
 
 # ---------- apreendidos com captura antes (estado do padrão na data real da apreensão) ----------
@@ -261,3 +264,10 @@ def test_apreendidos_da_simulacao(sim):
     assert r["total"] > 1000 and r["com_placa"] <= r["total"] and 20 <= r["na_janela"] <= r["com_captura_antes"]
     na = [x for x in r["itens"] if x["estado"] in COM_CAPTURA]
     assert len(na) == r["na_janela"] and all(x["dias_antes"] >= 0 and x["ultima"].normalize() <= x["dt_apreensao"] for x in na)
+
+
+
+def test_apreendido_sem_advogado_casa_com_o_filtro():
+    prep = P.preparar(cap_raw(A_ | {"CAPTURED": "2026-11-19 08:00"}))
+    it = P.apreendidos_com_captura(prep, _aps({"ADVOGADO": None}))["itens"][0]
+    assert it["advogado"] == "(sem advogado)"
