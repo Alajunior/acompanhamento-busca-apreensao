@@ -127,3 +127,9 @@ def test_terceiro_intacto_fica_fora_e_alterado_entra(tmp_path):
     assert terceiro_intacto(f, hash_lf)
     f.write_bytes(b"var a=2;\n")
     assert not terceiro_intacto(f, hash_lf)
+
+
+def test_sem_dump_de_perfil_versionado():
+    """Dump do cProfile grava caminhos locais (usuário do Windows): nunca vai para o repositório."""
+    nomes = subprocess.run(["git", "ls-files"], cwd=RAIZ, capture_output=True, text=True, check=True).stdout.split()
+    assert not [n for n in nomes if n == "prof" or n.endswith((".prof", ".pstats"))]
