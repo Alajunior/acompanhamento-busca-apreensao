@@ -5,6 +5,8 @@ Encerrada), as duas datas da apreensão (dia útil do registro e data do fato), 
 valor de performance estimado, o localizador padronizado e as passagens das fichas de localizador.
 """
 import re
+import unicodedata
+from collections import Counter
 from datetime import date
 
 import pandas as pd
@@ -226,3 +228,167 @@ def linhas_pasta(f, instante: pd.Timestamp, localizadores: dict[str, str]) -> pd
 
 def _f(v):
     return None if v is None or pd.isna(v) else float(v)
+
+
+# ---------------- localizador padronizado (texto livre → um nome por pessoa/telefone) ----------------
+UFS = {"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ",
+       "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"}
+CONECTIVOS = {"DE", "DA", "DO", "DOS", "DAS", "E"}
+_TEL = re.compile(r"(?:\+?55[\s.-]*)?\(?\d[\d\s().-]{6,}\d")
+_DATA = re.compile(r"\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b")
+_PREFIXO = re.compile(r"^(?:FICHA ENVIADA (?:AO|A|COM)\S*\s+|LOCALIZADORA?\s+|LOC\.?\s+|DRA?\.?\s+)+")
+_PARA = re.compile(r"\b(?:LOC|LOCALIZACAO|FICHA|TEL|CEL|COMARCA|REGIAO)\b.*$")
+_SEPARADORES = re.compile(r" - |[/,;:|()~]")
+
+
+def _ascii(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+
+def _telefone(texto: str) -> str | None:
+    for m in _TEL.finditer(texto):
+        dig = re.sub(r"\D", "", m.group(0))
+        if len(dig) >= 12 and dig.startswith("55"):
+            dig = dig[2:]
+        if 8 <= len(dig) <= 13:
+            return dig
+    return None
+
+
+def _fmt_tel(dig: str) -> str:
+    return f"{dig[:2]} {dig[2:-4]}-{dig[-4:]}" if len(dig) >= 10 else f"{dig[:-4]}-{dig[-4:]}"
+
+
+def _nome(texto: str, comarcas: set[str]) -> str | None:
+    s = " ".join(_ascii(texto).upper().split())
+    s = _DATA.sub(" ", _TEL.sub(" ", s.replace("+55", " ")))
+    s = _PREFIXO.sub("", " ".join(s.split()))
+    partes = [p.strip() for p in _SEPARADORES.split(s)]
+    s = next((p for p in partes if re.search(r"[A-Z]", p)), "")
+    s = _PREFIXO.sub("", _PARA.sub("", s).strip())
+    palavras = re.sub(r"[^A-Z ]", " ", s).split()
+    out = []
+    for i, w in enumerate(palavras):
+        if i > 0 and (w in UFS or any(" ".join(palavras[i:i + k]) in comarcas for k in (1, 2, 3))):
+            break
+        out.append(w)
+    out = out[:4]
+    while out and out[-1] in CONECTIVOS:
+        out.pop()
+    return " ".join(out) or None
+
+
+def _rotulo(itens: list) -> str | None:
+    cont = Counter(n for _, n, _ in itens if n)
+    if not cont:
+        return None
+    r = sorted(cont, key=lambda n: (-cont[n], -len(n.split()), n))[0]
+    if len(r.split()) >= 3 and len(cont) > 1:
+        comum = []
+        for ws in zip(*[n.split() for n in cont]):
+            if len(set(ws)) > 1:
+                break
+            comum.append(ws[0])
+        r = " ".join(comum) or r
+    if len(r.split()) == 1:
+        duas = sorted((n for n in cont if len(n.split()) == 2 and n.split()[0] == r), key=lambda n: (-cont[n], n))
+        r = duas[0] if duas else r
+    return r
+
+
+def padronizar_localizadores(textos: list[str], comarcas: set[str]) -> tuple[dict[str, str], dict[str, dict]]:
+    """Mesmo telefone = mesmo localizador; nome sem telefone entra no grupo se esse nome aparece com telefone em um grupo só."""
+    comarcas = {_ascii(c).upper() for c in comarcas}
+    lidos = [(t, _telefone(str(t)), _nome(str(t), comarcas)) for t in textos]
+    grupos: dict[str, list] = {}
+    for t, tel, nome in lidos:
+        if tel:
+            grupos.setdefault(tel[-8:], []).append((t, nome, tel))
+    nome_em: dict[str, set] = {}
+    for k, itens in grupos.items():
+        for _, nome, _ in itens:
+            if nome:
+                nome_em.setdefault(nome, set()).add(k)
+    sozinhos: dict[str, list] = {}
+    for t, tel, nome in lidos:
+        if tel or not nome:
+            continue
+        ks = nome_em.get(nome, set())
+        (grupos[next(iter(ks))] if len(ks) == 1 else sozinhos.setdefault(nome, [])).append((t, nome, None))
+    finais = [(k, _rotulo(itens), itens, sorted({tel for _, _, tel in itens if tel})) for k, itens in grupos.items()]
+    finais += [(None, nome, itens, []) for nome, itens in sozinhos.items()]
+    repetidos = Counter(r for _, r, _, _ in finais if r)
+    mapa, info = {}, {}
+    for k, r, itens, tels in finais:
+        lab = (f"SEM NOME (FINAL {k[-4:]})" if r is None else f"{r} (FINAL {k[-4:]})" if repetidos[r] > 1 and k else r)
+        for t, _, _ in itens:
+            mapa[t] = lab
+        i = info.setdefault(lab, {"telefones": [], "grafias": 0})
+        i["telefones"] = sorted(set(i["telefones"]) | {_fmt_tel(x) for x in tels})
+        i["grafias"] += len({t for t, _, _ in itens})
+    for t, _, _ in lidos:
+        mapa.setdefault(t, SEM_LOCALIZADOR)
+    return mapa, info
+
+
+def localizadores_de(f) -> tuple[dict[str, str], dict[str, dict]]:
+    textos = (list(f.campos.loc[f.campos["CAMPO"] == "NOME DO LOCALIZADOR", "VALOR"].dropna())
+              + list(f.fichas["LOCALIZADOR"].dropna()))
+    return padronizar_localizadores(textos, set(f.tarefas["COMARCA"].dropna().unique()))
+
+
+# ---------------- passagens das fichas de localizador ----------------
+COLS_PASSAGEM = ["PASTA", "LOCALIZADOR", "RECEBEU", "ATE", "DIAS", "RESULTADO", "FICHAS", "UF", "ADVOGADO", "MES_ENVIO",
+                 "APREENDEU", "VALOR_PERFORMANCE", "DIAS_ATE_LOCALIZAR"]
+
+
+def passagens(f, linhas: pd.DataFrame, instante: pd.Timestamp, localizadores: dict[str, str]) -> pd.DataFrame:
+    """Uma linha por passagem (fichas seguidas ao mesmo localizador), com o resultado e o crédito da apreensão."""
+    fi = f.fichas[(f.fichas["STATUS_FINAL"] == "ENVIADO") & f.fichas["LOCALIZADOR"].notna()].copy()
+    fi["REC"] = fi["DATA_CONCLUSAO"].fillna(fi["DATA_INICIO"])
+    fi = fi[fi["REC"] <= instante]
+    fi["PASTA"] = fi["PASTA"].map(chave)
+    fi["LOCZ"] = fi["LOCALIZADOR"].map(lambda t: localizadores.get(t, SEM_LOCALIZADOR))
+    fi = fi[fi["LOCZ"] != SEM_LOCALIZADOR].sort_values(["PASTA", "REC"])
+    t = f.tarefas[(f.tarefas["DATA_INICIO"] <= instante) & (f.tarefas["TAREFA"] == LOC)]
+    t = t[~((t["STATUS_FINAL"] == EQUIVOCADO) & (t["DATA_CONCLUSAO"] <= instante))]
+    locs = t.assign(PASTA=t["PASTA"].map(chave)).groupby("PASTA")["DATA_INICIO"].apply(sorted).to_dict()
+    lin = linhas.set_index("PASTA")
+    out = []
+    for pasta, g in fi.groupby("PASTA", sort=False):
+        real = lin["DT_APREENSAO_REAL"].get(pasta)
+        real = None if real is None or pd.isna(real) else pd.Timestamp(real) + pd.Timedelta(hours=23, minutes=59, seconds=59)
+        valor = lin["VALOR_PERFORMANCE"].get(pasta)
+        ls = list(locs.get(pasta, []))
+        if real is not None and not [x for x in ls if x <= real]:
+            ls.append(real)            # sem localização válida até a apreensão: a apreensão conta como localização
+        ls.sort()
+        blocos = []
+        for r in g.itertuples():
+            if blocos and blocos[-1]["LOCALIZADOR"] == r.LOCZ:
+                blocos[-1]["FICHAS"] += 1
+            else:
+                blocos.append({"LOCALIZADOR": r.LOCZ, "RECEBEU": r.REC, "FICHAS": 1, "UF": r.UF, "ADVOGADO": r.ADV_OPERACIONAL})
+        for i, b in enumerate(blocos):
+            prox = blocos[i + 1]["RECEBEU"] if i + 1 < len(blocos) else None
+            achou = next((x for x in ls if x >= b["RECEBEU"] and (prox is None or x < prox)), None)
+            ja_achado = any(x < b["RECEBEU"] for x in ls)
+            if achou is not None:
+                res, ate = "localizou", achou
+            elif real is not None and (prox is None or real < prox) and (ja_achado or real >= b["RECEBEU"]):
+                res, ate = "encerrada", real
+            elif prox is not None:
+                res, ate = "substituido", prox
+            else:
+                res, ate = "sem_localizacao", None
+            fim = ate if ate is not None else instante
+            b.update(PASTA=pasta, ATE=ate, RESULTADO=res, DIAS=round((fim - b["RECEBEU"]) / pd.Timedelta(days=1), 1),
+                     MES_ENVIO=mes_txt(b["RECEBEU"].date()), APREENDEU=False, VALOR_PERFORMANCE=None,
+                     DIAS_ATE_LOCALIZAR=None if achou is None else round((achou - b["RECEBEU"]) / pd.Timedelta(days=1), 1))
+        if real is not None:
+            cand = [b for b in blocos if b["RESULTADO"] == "localizou" and b["RECEBEU"] <= real]
+            if cand:
+                cand[-1]["APREENDEU"] = True
+                cand[-1]["VALOR_PERFORMANCE"] = None if valor is None or pd.isna(valor) else float(valor)
+        out += blocos
+    return pd.DataFrame(out, columns=COLS_PASSAGEM)

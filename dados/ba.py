@@ -37,7 +37,7 @@ _AVES = ["ARARA", "TUCANO", "SABIA", "BEM TE VI", "CANARIO", "GAVIAO", "CORUJA",
          "AZULAO", "JURITI", "ARAPONGA", "CAMBACICA", "TICO TICO", "QUERO QUERO", "MARTIM", "BIGUA"]
 _RIOS = ["RIO DOCE", "RIO VERDE", "RIO PRETO", "RIO CLARO", "RIO BRANCO", "RIO NEGRO", "RIO TIETE", "RIO URUGUAI",
          "RIO PARDO", "RIO MOGI", "RIO GRANDE", "RIO SAPUCAI", "RIO PIRACICABA", "RIO IVAI", "RIO JACUI", "RIO MEARIM",
-         "RIO PARNAIBA", "RIO XINGU", "RIO TAPAJOS", "RIO JURUA"]
+         "RIO UNA", "RIO XINGU", "RIO TAPAJOS", "RIO JURUA"]
 _SERRAS = ["SERRA AZUL", "SERRA DOURADA", "SERRA VERDE", "SERRA NEGRA", "SERRA DO MAR", "SERRA BRANCA", "SERRA ALTA",
            "SERRA DA CANASTRA", "SERRA FINA", "SERRA PELADA"]
 _SUFIXOS = ["", " SUL", " NORTE", " LESTE"]
@@ -107,6 +107,14 @@ def _localizadores(rng) -> pd.DataFrame:
 def _hora(rng, dia: pd.Timestamp, p_noite: float = 0.0) -> pd.Timestamp:
     h = int(rng.integers(19, 23)) if rng.random() < p_noite else int(rng.integers(8, 19))
     return dia.normalize() + pd.Timedelta(hours=h, minutes=int(rng.integers(0, 60)))
+
+
+def _texto_loc(rng, locs: pd.DataFrame, peso, j: int | None) -> str:
+    """O que o advogado digita no campo NOME DO LOCALIZADOR (às vezes um ponto ou nada)."""
+    if j is None or rng.random() < 0.15:
+        j = int(rng.choice(len(locs), p=peso))
+    r = rng.random()
+    return "." if r < 0.04 else ("" if r < 0.07 else str(rng.choice(locs.at[j, "grafias"])))
 
 
 def _brl(v: float) -> str:
@@ -214,21 +222,21 @@ def fontes_ba(sim: Simulacao, seed: int = 7) -> FontesBA:
         bem = float(est["VALOR_DO_BEM"].get(pasta, np.nan))
         ref = None if np.isnan(bem) else round(bem * float(rng.uniform(0.9, 1.3)), 2)
         ano = real.year - 1 if rng.random() < 0.02 else real.year          # ano digitado errado: fora da janela
-        campos.append((pasta, "DATA DA APREENSÃO", f"{real.day:02d}/{real.month:02d}/{ano}", registro))
+        campos.append((pasta, APREENSAO, "DATA DA APREENSÃO", f"{real.day:02d}/{real.month:02d}/{ano}", registro))
         if ref is not None and rng.random() > 0.05:
-            campos.append((pasta, "TABELA FIPE", _brl(ref), registro))
+            campos.append((pasta, APREENSAO, "TABELA FIPE", _brl(ref), registro))
         r = rng.random()
         if ref is not None and r < 0.80:
             fator = rng.uniform(0.5, 0.85) if r < 0.40 else (rng.uniform(0.86, 1.2) if r < 0.75 else rng.uniform(3.2, 5))
-            campos.append((pasta, "AVALIAÇÃO DO BEM", _brl(round(ref * float(fator), 2)), registro))
-        j = loc_da_ficha.get(pasta)
-        if j is None or rng.random() < 0.15:
-            j = int(rng.choice(len(locs), p=peso))
-        texto = "." if rng.random() < 0.04 else ("" if rng.random() < 0.04 else str(rng.choice(locs.at[j, "grafias"])))
-        if texto:
-            campos.append((pasta, "NOME DO LOCALIZADOR", texto, registro))
-    campos = pd.DataFrame(campos, columns=["PASTA", "CAMPO", "VALOR", "DATA_CADASTRO"])
-    campos["TAREFA"] = APREENSAO
+            campos.append((pasta, APREENSAO, "AVALIAÇÃO DO BEM", _brl(round(ref * float(fator), 2)), registro))
+        if pasta not in primeira_loc.index:      # apreensão sem localização: o nome vai no formulário da apreensão
+            campos.append((pasta, APREENSAO, "NOME DO LOCALIZADOR", _texto_loc(rng, locs, peso, None), registro))
+    # o nome do localizador é digitado no formulário de cada localização
+    for r in loc[loc["TAREFA"] == LOC].itertuples():
+        j = loc_da_ficha.get(r.PASTA) if r.DATA_INICIO == primeira_loc.get(r.PASTA) else None
+        campos.append((r.PASTA, LOC, "NOME DO LOCALIZADOR", _texto_loc(rng, locs, peso, j), r.DATA_INICIO))
+    campos = pd.DataFrame(campos, columns=["PASTA", "TAREFA", "CAMPO", "VALOR", "DATA_CADASTRO"])
+    campos = campos[campos["VALOR"] != ""].reset_index(drop=True)
 
     # ---- tarefas finais com os atributos da pasta
     tarefas = pd.concat([mand, loc], ignore_index=True)
@@ -244,8 +252,11 @@ def fontes_ba(sim: Simulacao, seed: int = 7) -> FontesBA:
     tarefas.insert(1, "ID_TAREFA", np.arange(5_000_000, 5_000_000 + len(tarefas)))
     espaco = rng.random(len(tarefas)) < 0.01                       # chave da pasta com espaço/NBSP, como na fonte
     tarefas.loc[espaco, "PASTA"] = tarefas.loc[espaco, "PASTA"] + "\xa0"
+    ids = tarefas.assign(_k=tarefas["PASTA"].str.strip()).drop_duplicates(["_k", "TAREFA", "DATA_INICIO"])
+    ids = ids.set_index(["_k", "TAREFA", "DATA_INICIO"])["ID_TAREFA"]
     id_ap = tarefas[tarefas["TAREFA"] == APREENSAO].assign(_k=lambda x: x["PASTA"].str.strip()).set_index("_k")["ID_TAREFA"]
-    campos.insert(1, "ID_TAREFA", campos["PASTA"].map(id_ap).astype("int64"))
+    chave_loc = list(zip(campos["PASTA"], campos["TAREFA"], campos["DATA_CADASTRO"]))
+    campos.insert(1, "ID_TAREFA", [int(id_ap[pa]) if ta == APREENSAO else int(ids[(pa, ta, d)]) for pa, ta, d in chave_loc])
 
     fichas = fichas.join(attrs, on="PASTA").rename(columns={"ADVOGADO_OPERACIONAL": "ADV_OPERACIONAL"})
     fichas.insert(1, "ID_TAREFA", np.arange(8_000_000, 8_000_000 + len(fichas)))

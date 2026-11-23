@@ -108,3 +108,72 @@ def test_campos_texto_da_pasta():
 def test_chave_com_nbsp_vira_a_mesma_pasta():
     f = fontes([tarefa("1\xa0", LOC, "2026-11-01"), tarefa("1", "1º MANDADO EXPEDIDO", "2026-11-03")])
     assert list(linhas_pasta(f, AGORA, {})["PASTA"]) == ["1"]
+
+
+# ---------- localizador padronizado e passagens (Task 5) ----------
+from src.ba_regras import padronizar_localizadores, passagens   # noqa: E402
+from tests.construtores_ba import ficha   # noqa: E402
+
+
+def test_mesmo_telefone_e_o_mesmo_localizador():
+    m, info = padronizar_localizadores(["ARARA AZUL - 00 91234-5678", "LOC. ARARA AZUL SP", "00 91234-5678 (ARARA)"], set())
+    assert set(m.values()) == {"ARARA AZUL"} and info["ARARA AZUL"] == {"telefones": ["00 91234-5678"], "grafias": 3}
+
+
+def test_xaras_ganham_final():
+    m, _ = padronizar_localizadores(["RIO DOCE - 00 91111-2222", "RIO DOCE - 00 93333-4444"], set())
+    assert sorted(m.values()) == ["RIO DOCE (FINAL 2222)", "RIO DOCE (FINAL 4444)"]
+
+
+def test_so_telefone_so_pontuacao_ou_vazio():
+    m, _ = padronizar_localizadores(["00 95555-6666", ".", "  "], set())
+    assert m["00 95555-6666"] == "SEM NOME (FINAL 6666)" and m["."] == m["  "] == "(sem localizador)"
+
+
+def test_cidade_e_uf_encerram_o_nome():
+    m, _ = padronizar_localizadores(["CURIO CAMPINAS", "LOC. SABIA RJ - 00 97777-8888"], {"CAMPINAS"})
+    assert m["CURIO CAMPINAS"] == "CURIO" and m["LOC. SABIA RJ - 00 97777-8888"] == "SABIA"
+
+
+def _pass(f, mapa=None):
+    mapa = mapa or {"A": "A", "B": "B"}
+    lin = linhas_pasta(f, AGORA, mapa)
+    return passagens(f, lin, AGORA, mapa).sort_values(["PASTA", "RECEBEU"]).reset_index(drop=True)
+
+
+def test_passagem_localizou_e_substituido():
+    f = fontes([tarefa("1", LOC, "2026-11-01 10:00")], fichas=[ficha("1", "A", "2026-10-01"), ficha("1", "B", "2026-10-20", 2)])
+    p = _pass(f)
+    assert list(p.RESULTADO) == ["substituido", "localizou"] and list(p.LOCALIZADOR) == ["A", "B"]
+    assert p.loc[1, "DIAS_ATE_LOCALIZAR"] == 12.3          # 20/10 02:00 → 01/11 10:00
+
+
+def test_fichas_seguidas_ao_mesmo_localizador_sao_uma_passagem():
+    f = fontes([tarefa("1", LOC, "2026-11-01")], fichas=[ficha("1", "A", "2026-10-01"), ficha("1", "A", "2026-10-10", 2)])
+    p = _pass(f)
+    assert len(p) == 1 and p.loc[0, "FICHAS"] == 2 and p.loc[0, "RESULTADO"] == "localizou"
+
+
+def test_apreensao_vai_para_ultima_passagem_que_localizou():
+    f = fontes([tarefa("2", LOC, "2026-09-10", "2026-09-12", "NAO LOCALIZADO NO ENDERECO"),
+                tarefa("2", LOC, "2026-09-25", "2026-10-01 10:00", "VEICULO APREENDIDO"),
+                tarefa("2", "BEM APREENDIDO", "2026-10-01 10:00", "2026-10-02")],
+               fichas=[ficha("2", "A", "2026-09-01"), ficha("2", "B", "2026-09-20", 2)])
+    p = _pass(f)
+    assert list(p.RESULTADO) == ["localizou", "localizou"] and list(p.APREENDEU) == [False, True]
+    assert p.loc[1, "VALOR_PERFORMANCE"] == 22_000.0
+
+
+def test_ficha_que_chega_com_o_carro_ja_achado_fica_fora_do_divisor():
+    f = fontes([tarefa("3", LOC, "2026-09-10", "2026-09-20 10:00", "VEICULO APREENDIDO"),
+                tarefa("3", "BEM APREENDIDO", "2026-09-20 10:00", "2026-09-21")], fichas=[ficha("3", "A", "2026-09-15")])
+    assert list(_pass(f).RESULTADO) == ["encerrada"]
+
+
+def test_taxa_localizou_calibrada(ba_fontes):
+    from src.ba_regras import localizadores_de
+    mapa, _ = localizadores_de(ba_fontes)
+    lin = linhas_pasta(ba_fontes, AGORA, mapa)
+    p = passagens(ba_fontes, lin, AGORA, mapa)
+    taxa = (p.RESULTADO == "localizou").sum() / ((p.RESULTADO != "encerrada").sum())
+    assert 0.15 <= taxa <= 0.22, taxa
