@@ -377,8 +377,10 @@ def passagens(f, linhas: pd.DataFrame, instante: pd.Timestamp, localizadores: di
             ja_achado = any(x < b["RECEBEU"] for x in ls)
             if achou is not None:
                 res, ate = "localizou", achou
-            elif real is not None and (prox is None or real < prox) and (ja_achado or real >= b["RECEBEU"]):
-                res, ate = "encerrada", real
+            elif ja_achado or (real is not None and real >= b["RECEBEU"] and (prox is None or real < prox)):
+                # chegou com o carro já achado, ou a pasta foi apreendida com a ficha com ele: fora do divisor
+                fins = [x for x in (real if real is not None and real >= b["RECEBEU"] else None, prox) if x is not None]
+                res, ate = "encerrada", min(fins) if fins else None
             elif prox is not None:
                 res, ate = "substituido", prox
             else:

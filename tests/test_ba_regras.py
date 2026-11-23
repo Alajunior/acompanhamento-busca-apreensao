@@ -212,3 +212,9 @@ def test_apreendido_na_data_real():
     f = fontes([tarefa("1", "BEM APREENDIDO", "2026-10-30 20:00", "2026-10-31", "CONCLUIDO")],
                [campo("1", "DATA DA APREENSÃO", "29/10/2026", "2026-10-30 20:00")])
     assert [(EVENTOS[e], d, st) for e, _, d, st, _ in _lt(f)["1"]] == [("APREENDIDO", "2026-10-29", "CONCLUIDO")]
+
+
+def test_ficha_com_carro_ja_achado_sem_apreensao_fica_fora_do_divisor():
+    f = fontes([tarefa("4", LOC, "2026-10-10")], fichas=[ficha("4", "A", "2026-10-15")])      # localização aberta antes da ficha
+    p = _pass(f)
+    assert list(p.RESULTADO) == ["encerrada"] and p.loc[0, "ATE"] is None
