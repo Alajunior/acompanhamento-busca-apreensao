@@ -18,6 +18,7 @@ import pandas as pd
 
 from dados.gerar import HOJE, Simulacao
 from src.ba_calendario import FERIADOS_2026
+from src.ba_regras import valor_performance
 
 INICIO_BA = pd.Timestamp("2026-01-01")
 FIM = HOJE + pd.Timedelta(hours=17, minutes=5)       # último "agora" do dia simulado
@@ -218,17 +219,22 @@ def fontes_ba(sim: Simulacao, seed: int = 7) -> FontesBA:
 
     # ---- campos do formulário da apreensão
     est = sim.estoque.assign(_k=sim.estoque["CONTRATO"].str.upper().str.strip()).drop_duplicates("_k").set_index("_k")
+    valor_ap = {}      # valor de performance que a regra vai estimar: a meta em R$ sai perto dele
     for pasta, (real, registro) in apreensoes.items():
         bem = float(est["VALOR_DO_BEM"].get(pasta, np.nan))
+        fipe = aval = None
         ref = None if np.isnan(bem) else round(bem * float(rng.uniform(0.9, 1.3)), 2)
         ano = real.year - 1 if rng.random() < 0.02 else real.year          # ano digitado errado: fora da janela
         campos.append((pasta, APREENSAO, "DATA DA APREENSÃO", f"{real.day:02d}/{real.month:02d}/{ano}", registro))
         if ref is not None and rng.random() > 0.05:
+            fipe = ref
             campos.append((pasta, APREENSAO, "TABELA FIPE", _brl(ref), registro))
         r = rng.random()
         if ref is not None and r < 0.80:
             fator = rng.uniform(0.5, 0.85) if r < 0.40 else (rng.uniform(0.86, 1.2) if r < 0.75 else rng.uniform(3.2, 5))
-            campos.append((pasta, APREENSAO, "AVALIAÇÃO DO BEM", _brl(round(ref * float(fator), 2)), registro))
+            aval = round(ref * float(fator), 2)
+            campos.append((pasta, APREENSAO, "AVALIAÇÃO DO BEM", _brl(aval), registro))
+        valor_ap[pasta] = valor_performance(aval, fipe, None if np.isnan(bem) else bem)[0]
         if pasta not in primeira_loc.index:      # apreensão sem localização: o nome vai no formulário da apreensão
             campos.append((pasta, APREENSAO, "NOME DO LOCALIZADOR", _texto_loc(rng, locs, peso, None), registro))
     # o nome do localizador é digitado no formulário de cada localização
@@ -280,12 +286,12 @@ def fontes_ba(sim: Simulacao, seed: int = 7) -> FontesBA:
                               "DIAS_ATRASO_REF": sim.estoque["DIAS_ATRASO"]})
     estoque = sim.estoque[["CONTRATO", "VALOR_RISCO_CONTRATO", "VALOR_DO_BEM"]].copy()
 
-    metas_faixa, metas_adv = _metas(rng, apreensoes, fase_base, p)
+    metas_faixa, metas_adv = _metas(rng, apreensoes, fase_base, p, valor_ap)
     return FontesBA(tarefas, campos, acoes, fase_base, fichas.drop(columns=["_loc"]), estoque, metas_faixa, metas_adv,
                     FERIADOS_2026)
 
 
-def _metas(rng, apreensoes: dict, fase_base: pd.DataFrame, p: pd.DataFrame):
+def _metas(rng, apreensoes: dict, fase_base: pd.DataFrame, p: pd.DataFrame, valor_ap: dict):
     """Metas sintéticas: perto do realizado de cada mês (nunca os números do cliente); dezembro fica sem meta."""
     atraso = fase_base.assign(_k=fase_base["CONTRATO"].str.upper().str.strip()).drop_duplicates("_k").set_index("_k")
     reg = pd.DataFrame([(k, r.month, r.year) for k, (_, r) in apreensoes.items()], columns=["PASTA", "M", "A"])
@@ -293,6 +299,10 @@ def _metas(rng, apreensoes: dict, fase_base: pd.DataFrame, p: pd.DataFrame):
     dias = reg["PASTA"].map(atraso["DIAS_ATRASO_REF"]) - [(HOJE - pd.Timestamp(2026, m, 15)).days for m in reg["M"]]
     reg["FASE"] = [fase_por_atraso(d) for d in dias]
     reg["ADV"] = reg["PASTA"].map(p["ADVOGADO_OPERACIONAL"])
+    reg["VALOR"] = reg["PASTA"].map(valor_ap)
+    tkt = {k: round(float(reg.loc[reg["FASE"] == k, "VALOR"].mean()) / 500) * 500 if (reg["FASE"] == k).any() else v
+           for k, v in TIQUETE.items()}          # tíquete médio do realizado por fase (padrão: TIQUETE)
+    tkt_adv = round(float(reg["VALOR"].mean()) / 500) * 500
     faixa, adv = [], []
     media = reg[reg["FASE"].isin(TIQUETE)].groupby("FASE").size() / reg["M"].nunique()
     top = reg["ADV"].dropna().value_counts().head(12).index
@@ -301,10 +311,10 @@ def _metas(rng, apreensoes: dict, fase_base: pd.DataFrame, p: pd.DataFrame):
         mes = f"{m:02d}/2026"
         f = {k: int(round(media.get(k, 1) * float(rng.uniform(1.0, 1.2)))) for k in TIQUETE}
         for k, q in f.items():
-            faixa.append((mes, k, q, None if k in ("JUDICIAL 1", "JUDICIAL 2") else q * TIQUETE[k]))
-        faixa.append((mes, "121 A 360", None, f["JUDICIAL 1"] * TIQUETE["JUDICIAL 1"] + f["JUDICIAL 2"] * TIQUETE["JUDICIAL 2"]))
+            faixa.append((mes, k, q, None if k in ("JUDICIAL 1", "JUDICIAL 2") else q * tkt[k]))
+        faixa.append((mes, "121 A 360", None, f["JUDICIAL 1"] * tkt["JUDICIAL 1"] + f["JUDICIAL 2"] * tkt["JUDICIAL 2"]))
         for a in top:
             q = int(round(media_adv[a] * float(rng.uniform(1.0, 1.25))))
-            adv.append((mes, a, q, q * 16_000))
+            adv.append((mes, a, q, q * tkt_adv))
     cols = ["MES", "CHAVE", "QTD", "VALOR"]
     return pd.DataFrame(faixa, columns=cols), pd.DataFrame(adv, columns=cols)

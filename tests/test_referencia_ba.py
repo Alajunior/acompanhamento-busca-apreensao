@@ -117,3 +117,10 @@ def test_recortes_ordem_da_lista(ba_json):
     etapas = [x["ETAPA"] for x in r["lista"]]
     ordem = ["Apreendido", "Mandado expedido", "Localizado (diligência)", "Localização encerrada sem apreensão"]
     assert etapas == sorted(etapas, key=ordem.index)
+
+
+def test_metas_em_valor_perto_do_realizado(ba_json):
+    """Meta sintética 'perto do realizado' também em R$: % atingido em valor na faixa do % em quantidade."""
+    for m in range(1, 11):
+        tot = next(l for l in secoes(ba_json, "17:05", {"mes": f"{m}/2026"})["meta_banco"]["linhas"] if l["chave"] == "TOTAL")
+        assert 0.7 <= tot["pct_valor"] <= 1.35, (m, tot["pct_valor"], tot["pct_qtd"])
