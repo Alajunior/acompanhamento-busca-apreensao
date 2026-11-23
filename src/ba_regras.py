@@ -7,7 +7,7 @@ valor de performance estimado, o localizador padronizado e as passagens das fich
 import re
 import unicodedata
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 
 import pandas as pd
 
@@ -99,74 +99,61 @@ def _data_br(s) -> date | None:
         return None
 
 
-def _ultimo(df: pd.DataFrame, col: str):
-    s = df[col].dropna()
-    return s.iloc[-1] if len(s) else None
+def _ultimo(rows: list[dict], col: str):
+    for r in reversed(rows):
+        if r[col] is not None:
+            return r[col]
+    return None
 
 
-def _pasta(g: pd.DataFrame, campos: dict, instante: pd.Timestamp, hoje: date, atraso, bem, risco, acoes,
+def _pasta(rows: list[dict], campos: dict, instante: pd.Timestamp, hoje: date, atraso, bem, risco, ult_acao,
            localizadores: dict) -> dict | None:
-    g = g.sort_values(["DATA_INICIO", "ID_TAREFA"])
-    concl = g["DATA_CONCLUSAO"].where(g["DATA_CONCLUSAO"] <= instante)
-    status = g["STATUS_FINAL"].where(concl.notna())
-    g = g.assign(CONC=concl, ST=status)
-    ev = g["TAREFA"].map(evento_de)
-    g = g.assign(EVENTO=[e for e, _ in ev], N=[n for _, n in ev])
-    valida = g["EVENTO"].notna() & ((g["ST"] != EQUIVOCADO) | (g["EVENTO"] == "LOCALIZADO"))
-    mk = g[valida]
-    if not (mk["EVENTO"].isin(["LOCALIZADO", "APREENDIDO"])).any():
+    """`rows` = tarefas da pasta já em ordem (DATA_INICIO, ID_TAREFA), com EVENTO e N calculados."""
+    for r in rows:
+        c = r["DATA_CONCLUSAO"]
+        r["CONC"] = c if c is not None and c <= instante else None
+        r["ST"] = r["STATUS_FINAL"] if r["CONC"] is not None else None
+    mk = [r for r in rows if r["EVENTO"] and (r["ST"] != EQUIVOCADO or r["EVENTO"] == "LOCALIZADO")]
+    if not any(r["EVENTO"] in ("LOCALIZADO", "APREENDIDO") for r in mk):
         return None
-    locs = g[g["EVENTO"] == "LOCALIZADO"]
-    loc = locs.iloc[-1] if len(locs) else None
-    loc_aberta = loc is not None and pd.isna(loc["CONC"])
-
-    bens = mk[(mk["EVENTO"] == "APREENDIDO") & (mk["TAREFA"].str.upper().str.strip() == "BEM APREENDIDO")]
-    aps = mk[mk["EVENTO"] == "APREENDIDO"]
-    loc_ap = locs[(locs["ST"] == VEIC_APREENDIDO)]
-    if len(bens):
-        momento = bens.iloc[0]["DATA_INICIO"]
-    elif len(loc_ap):
-        momento = loc_ap.iloc[-1]["CONC"]
-    elif len(aps):
-        momento = aps.iloc[0]["DATA_INICIO"]
-    else:
-        momento = None
+    locs = [r for r in rows if r["EVENTO"] == "LOCALIZADO"]
+    loc = locs[-1] if locs else None
+    loc_aberta = loc is not None and loc["CONC"] is None
+    bens = [r for r in mk if r["EVENTO"] == "APREENDIDO" and r["TAREFA"].upper().strip() == "BEM APREENDIDO"]
+    aps = [r for r in mk if r["EVENTO"] == "APREENDIDO"]
+    loc_ap = [r for r in locs if r["ST"] == VEIC_APREENDIDO]
+    momento = (bens[0]["DATA_INICIO"] if bens else loc_ap[-1]["CONC"] if loc_ap else aps[0]["DATA_INICIO"] if aps else None)
     dt_ap = dia_util_registro(momento.to_pydatetime()) if momento is not None else None
     dt_real = None
     if momento is not None:
-        digitada = _data_br(campos.get("DATA DA APREENSÃO"))
-        if len(bens):
-            ab = bens.iloc[0]["DATA_INICIO"].date()
-            if digitada and (ab - pd.Timedelta(days=30).to_pytimedelta()) <= digitada <= (ab + pd.Timedelta(days=1).to_pytimedelta()):
+        if bens:
+            digitada = _data_br(campos.get("DATA DA APREENSÃO"))
+            ab = bens[0]["DATA_INICIO"].date()
+            if digitada and ab - timedelta(days=30) <= digitada <= ab + timedelta(days=1):
                 dt_real = digitada
-            elif len(loc_ap):
-                dt_real = loc_ap.iloc[-1]["CONC"].date()
             else:
-                dt_real = ab
+                dt_real = loc_ap[-1]["CONC"].date() if loc_ap else ab
         else:
             dt_real = momento.date()
-
-    mand = mk[mk["EVENTO"].isin(["EXPEDIDO", "NEGATIVO", "REQUERIDO"])]
     ordem = {"REQUERIDO": 0, "EXPEDIDO": 1, "NEGATIVO": 2}
-    ult_mand = (mand.assign(_o=mand["EVENTO"].map(ordem)).sort_values(["DATA_INICIO", "N", "_o"]).iloc[-1]
-                if len(mand) else None)
-    aguardando = ult_mand is not None and ult_mand["EVENTO"] == "EXPEDIDO" and (pd.isna(ult_mand["ST"]) or ult_mand["ST"] == "AG. RESULTADO")
+    mand = [r for r in mk if r["EVENTO"] in ordem]
+    ult_mand = max(mand, key=lambda r: (r["DATA_INICIO"], r["N"] or 0, ordem[r["EVENTO"]])) if mand else None
+    aguardando = (ult_mand is not None and ult_mand["EVENTO"] == "EXPEDIDO"
+                  and (ult_mand["ST"] is None or ult_mand["ST"] == "AG. RESULTADO"))
     if dt_real is not None and not (loc_aberta and loc["DATA_INICIO"].date() > dt_real):
         etapa = ETAPAS[0]
-    elif loc_aberta and aguardando:
-        etapa = ETAPAS[1]
     elif loc_aberta:
-        etapa = ETAPAS[2]
+        etapa = ETAPAS[1] if aguardando else ETAPAS[2]
     else:
         etapa = ETAPAS[3]
-
-    exp = mand[mand["EVENTO"] == "EXPEDIDO"]
-    dt_mandado = exp[exp["N"] == exp["N"].max()]["DATA_INICIO"].min().date() if len(exp) else None
-    abertas = g[g["CONC"].isna()]
-    concluidas = g[g["CONC"].notna()].sort_values("CONC")
+    exp = [r for r in mand if r["EVENTO"] == "EXPEDIDO"]
+    n_max = max(r["N"] for r in exp) if exp else None
+    dt_mandado = min(r["DATA_INICIO"] for r in exp if r["N"] == n_max).date() if exp else None
+    abertas = [r for r in rows if r["CONC"] is None]
+    concluidas = sorted((r for r in rows if r["CONC"] is not None), key=lambda r: r["CONC"])
     complemento = None
-    if len(concluidas):
-        c = concluidas.iloc[-1]
+    if concluidas:
+        c = concluidas[-1]
         complemento = f"{c['ST'] or 'CONCLUIDO'} em {c['CONC'].day:02d}/{c['CONC'].month:02d}"
     dt_loc = loc["DATA_INICIO"].date() if loc is not None else None
     evento = dt_ap if etapa == ETAPAS[0] else dt_loc
@@ -174,53 +161,68 @@ def _pasta(g: pd.DataFrame, campos: dict, instante: pd.Timestamp, hoje: date, at
     vp, origem = (valor_performance(_num_br(campos.get("AVALIAÇÃO DO BEM")), _num_br(campos.get("TABELA FIPE")), bem)
                   if dt_ap is not None else (None, None))
     original = campos.get("NOME DO LOCALIZADOR")
-    login = _ultimo(g, "LOGIN_OPERACIONAL")
-    ult = None
-    if login is not None and acoes is not None and len(acoes):
-        a = acoes[(acoes["LOGIN"] == login) & (acoes["ALTERACOES"] > 0)]["DIA"]
-        ult = a.max().date() if len(a) else None
+    login = _ultimo(rows, "LOGIN_OPERACIONAL")
     du = du_indice(dt_ap) if dt_ap else None
     mes_ap = mes_txt(dt_ap) if dt_ap else None
     return {
-        "PASTA": g["PASTA"].iloc[0], "ETAPA": etapa, "FINANCIADO": _ultimo(g, "PARTE_CONTRARIA"), "UF": _ultimo(g, "UF"),
-        "COMARCA": _ultimo(g, "COMARCA"), "ADVOGADO": _ultimo(g, "ADV_OPERACIONAL"), "LOGIN_OPERACIONAL": login,
+        "PASTA": rows[0]["PASTA"], "ETAPA": etapa, "FINANCIADO": _ultimo(rows, "PARTE_CONTRARIA"), "UF": _ultimo(rows, "UF"),
+        "COMARCA": _ultimo(rows, "COMARCA"), "ADVOGADO": _ultimo(rows, "ADV_OPERACIONAL"), "LOGIN_OPERACIONAL": login,
         "DT_LOCALIZACAO": dt_loc, "STATUS_LOCALIZACAO": None if loc is None or loc_aberta else loc["ST"],
         "DT_MANDADO": dt_mandado, "DT_APREENSAO": dt_ap,
-        "OBSERVACAO": abertas.iloc[-1]["TAREFA"] if len(abertas) else None, "COMPLEMENTO": complemento,
+        "OBSERVACAO": abertas[-1]["TAREFA"] if abertas else None, "COMPLEMENTO": complemento,
         "LOCALIZADOR": localizadores.get(original, SEM_LOCALIZADOR) if original else SEM_LOCALIZADOR,
         "MEMO_LOCALIZADO": loc["MEMO"] if loc is not None else None, "VALOR_RISCO": risco, "FASE": fase,
         "VALOR_PERFORMANCE": vp, "ORIGEM_VALOR": origem, "MES_APREENSAO": mes_ap, "LOCALIZADOR_ORIGINAL": original,
-        "DT_APREENSAO_REAL": dt_real, "ULT_ACAO_RESP": ult, "DIA_UTIL": du,
+        "DT_APREENSAO_REAL": dt_real, "ULT_ACAO_RESP": ult_acao.get(login) if login else None, "DIA_UTIL": du,
         "DIA_UTIL_OK": None if du is None else ("SIM" if du <= du_indice(hoje) else "NÃO"),
         "DIA_UTIL_QUEBRA": quebra(dt_ap) if dt_ap else None,
         "MES_EVENTO": mes_ap if etapa == ETAPAS[0] else (mes_txt(dt_loc) if dt_loc else None),
     }
 
 
+_COLS_T = ["PASTA", "ID_TAREFA", "TAREFA", "DATA_INICIO", "DATA_CONCLUSAO", "STATUS_FINAL", "PARTE_CONTRARIA", "UF",
+           "COMARCA", "ADV_OPERACIONAL", "LOGIN_OPERACIONAL", "MEMO"]
+
+
+def _registros(df: pd.DataFrame) -> list[dict]:
+    """DataFrame → lista de dicts com None no lugar de NaN/NaT (para o laço em Python puro)."""
+    return df.astype(object).where(df.notna(), None).to_dict("records")
+
+
 def linhas_pasta(f, instante: pd.Timestamp, localizadores: dict[str, str]) -> pd.DataFrame:
     """Uma linha por pasta do universo, só com o que o sistema jurídico mostrava em `instante`."""
     hoje = instante.date()
-    t = f.tarefas[f.tarefas["DATA_INICIO"] <= instante].copy()
+    t = f.tarefas[f.tarefas["DATA_INICIO"] <= instante][_COLS_T].copy()
     t["PASTA"] = t["PASTA"].map(chave)
-    universo = set(t.loc[t["TAREFA"].map(lambda n: evento_de(n)[0] in ("LOCALIZADO", "APREENDIDO")), "PASTA"])
-    t = t[t["PASTA"].isin(universo)]
+    ev = t["TAREFA"].map(evento_de)
+    t["EVENTO"] = [e for e, _ in ev]
+    t["N"] = [n for _, n in ev]
+    universo = set(t.loc[t["EVENTO"].isin(["LOCALIZADO", "APREENDIDO"]), "PASTA"])
+    t = t[t["PASTA"].isin(universo)].sort_values(["PASTA", "DATA_INICIO", "ID_TAREFA"])
     c = f.campos[f.campos["DATA_CADASTRO"] <= instante].assign(PASTA=lambda x: x["PASTA"].map(chave))
     c = c.sort_values("DATA_CADASTRO").groupby(["PASTA", "CAMPO"])["VALOR"].last()
-    campos = {p: grp.droplevel(0).to_dict() for p, grp in c.groupby(level=0)}
+    campos: dict[str, dict] = {}
+    for (pa, ca), v in c.items():
+        campos.setdefault(pa, {})[ca] = v
 
     def por_contrato(df, col):
-        return df.assign(_k=df["CONTRATO"].map(chave)).drop_duplicates("_k").set_index("_k")[col]
+        return df.assign(_k=df["CONTRATO"].map(chave)).drop_duplicates("_k").set_index("_k")[col].to_dict()
     atraso = por_contrato(f.fase_base, "DIAS_ATRASO_REF")
     ref = f.fase_base["DIA_REF"].iloc[0].date() if len(f.fase_base) else hoje
     bem, risco = por_contrato(f.estoque, "VALOR_DO_BEM"), por_contrato(f.estoque, "VALOR_RISCO_CONTRATO")
-    ac = f.acoes[f.acoes["DIA"] <= instante.normalize()].assign(PASTA=lambda x: x["PASTA"].map(chave))
-    ac_por = dict(tuple(ac.groupby("PASTA")))
+    ac = f.acoes[(f.acoes["DIA"] <= instante.normalize()) & (f.acoes["ALTERACOES"] > 0)]
+    ult_acao: dict[str, dict] = {}
+    for (pa, lo), d in ac.assign(PASTA=ac["PASTA"].map(chave)).groupby(["PASTA", "LOGIN"])["DIA"].max().items():
+        ult_acao.setdefault(pa, {})[lo] = d.date()
+    por_pasta: dict[str, list] = {}
+    for r in _registros(t):
+        por_pasta.setdefault(r["PASTA"], []).append(r)
     out = []
-    for pasta, g in t.groupby("PASTA", sort=True):
+    for pasta in sorted(por_pasta):
         a = atraso.get(pasta)
         a = None if a is None or pd.isna(a) else int(a) - (ref - hoje).days
-        r = _pasta(g, campos.get(pasta, {}), instante, hoje, a, _f(bem.get(pasta)), _f(risco.get(pasta)),
-                   ac_por.get(pasta), localizadores)
+        r = _pasta(por_pasta[pasta], campos.get(pasta, {}), instante, hoje, a, _f(bem.get(pasta)), _f(risco.get(pasta)),
+                   ult_acao.get(pasta, {}), localizadores)
         if r:
             out.append(r)
     return pd.DataFrame(out, columns=COLUNAS)

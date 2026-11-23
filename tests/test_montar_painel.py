@@ -176,3 +176,7 @@ def test_tres_tabelas_na_operacao(html_gerado):
         assert f'data-card="{card}"' in oper
     plan = html_gerado.split('<section id="v-planilha"')[1].split("</section>")[0]
     assert 'id="ba-raiz"' in plan and "c-produtivos" not in plan
+
+
+def test_index_html_nao_inclui_ba(html_gerado):
+    assert "localizadores_info" not in html_gerado     # o ba.json só é baixado ao abrir a aba

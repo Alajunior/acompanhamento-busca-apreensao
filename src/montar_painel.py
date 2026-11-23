@@ -18,6 +18,7 @@ import pandas as pd
 
 from dados.gerar import HOJE, NOME_UF, simular
 from src import padroes
+from src.montar_ba import montar_ba
 from src.publicacao import LinhaDoTempo, linha_do_tempo
 from src.regra import COLUNAS, EXTINTAS, ORDEM_ACAO, ORDEM_FOLLOW, ORDEM_PROCESSUAL, TIPOS, chave
 
@@ -232,7 +233,8 @@ def main() -> None:
     montar_html(payload, RAIZ / "docs" / "index.html")
     montar_bd(linha, payload, RAIZ / "docs" / "bd.json")
     montar_placas(cargas, padroes.bancos_por_pasta(sim), payload, RAIZ / "docs" / "placas.json")
-    print(" · ".join(f"docs/{a}: {(RAIZ / 'docs' / a).stat().st_size / 1024:.0f} KB" for a in ("index.html", "bd.json", "placas.json")))
+    montar_ba(sim, RAIZ / "docs" / "ba.json")
+    print(" · ".join(f"docs/{a}: {(RAIZ / 'docs' / a).stat().st_size / 1024:.0f} KB" for a in ("index.html", "bd.json", "placas.json", "ba.json")))
 
 
 if __name__ == "__main__":

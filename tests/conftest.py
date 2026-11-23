@@ -31,3 +31,9 @@ def payload(linha, cargas):
 def ba_fontes(sim):
     from dados.ba import fontes_ba
     return fontes_ba(sim)
+
+
+@pytest.fixture(scope="session")
+def ba_json(sim, tmp_path_factory):
+    from src.montar_ba import montar_ba
+    return montar_ba(sim, tmp_path_factory.mktemp("ba") / "ba.json")
