@@ -87,3 +87,22 @@ def test_rotina_sem_madrugada(sim, cap):
     da_carteira = cap["PLATE"].str.upper().str.replace(r"[^A-Z0-9]", "", regex=True).isin(set(sim.garantia["PLACA"]))
     h = pd.to_datetime(cap.loc[da_carteira, "CAPTURED"]).dt.hour
     assert (h < 4).mean() < 0.001, (h < 4).mean()
+
+
+def _pares_seguidos(sim, cap):
+    """Capturas seguidas da mesma placa da carteira, nos 60 dias, em células diferentes e com até 3 h entre elas."""
+    from src.padroes import celula, preparar
+    p = preparar(cap)
+    p = p[p["placa_n"].isin(set(sim.garantia["PLACA"])) & (p["quando"] > AGORA_FIM - pd.Timedelta(days=60))]
+    p = p.assign(c=[f"{a}_{b}" for a, b in (celula(x, y) for x, y in zip(p["lat_n"], p["lon_n"]))])
+    p = p.sort_values(["placa_n", "quando", "IDPLACAS"], kind="stable")
+    nxt = p.groupby("placa_n")[["c", "quando"]].shift(-1)
+    par = nxt["c"].notna() & (p["c"] != nxt["c"]) & ((nxt["quando"] - p["quando"]) <= pd.Timedelta(hours=3))
+    return p, par
+
+
+def test_rotina_mesmo_dia(sim, cap):
+    # casa → trabalho no mesmo dia: parte dos veículos tem capturas seguidas em pontos diferentes (o real tem 38%)
+    p, par = _pares_seguidos(sim, cap)
+    frac = p.loc[par, "placa_n"].nunique() / p["placa_n"].nunique()
+    assert 0.30 <= frac <= 0.45, frac

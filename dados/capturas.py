@@ -5,6 +5,10 @@ com uma hora típica e dias sorteados para produzir os estados dos padrões (≥
 esparsas pela cidade. Os pontos ficam no centro de uma célula de ~330 m (a dos padrões), com a câmera a ≤ 60 m,
 para o estado sorteado ser o estado medido.
 
+Parte dos veículos com 2+ pontos faz o caminho no mesmo dia: casa → 0 a 2 câmeras de passagem fixas → trabalho,
+15 a 60 min depois, e às vezes a volta à tarde/noite. É o que gera os trajetos repetidos da aba Padrões; a calibragem
+mira o real (38% das placas com trajeto, 10% com trajeto repetido em dias diferentes).
+
 Usa um gerador próprio (seed + 1): nenhum número da fase 1 muda.
 """
 from __future__ import annotations
@@ -22,6 +26,9 @@ P_VISTO = 0.35                                       # vistos nos últimos 60 di
 P_SO_ANTIGA = 0.05                                   # só capturas com mais de 60 dias
 P_ESTADO = {"observado": 0.42, "formacao": 0.20, "aprendendo": 0.38}
 P_OUTRA_CIDADE, P_OUTRA_UF = 0.08, 0.05
+P_ENCADEADA = 0.22                                   # veículos com 2+ pontos cuja rotina liga casa → trabalho no mesmo dia
+P_DIA_SEM_TRAJETO, P_VOLTA = 0.25, 0.6
+P_ESPARSA_PERTO = 0.15
 RAIO_KM = 6.0
 CELULA = 0.003
 HORAS = {"casa": [6, 7, 18, 19, 20], "trabalho": [7, 8, 9, 17, 18]}
@@ -82,6 +89,43 @@ def _passagens(rng, ponto: dict, dias_atras: np.ndarray, hora: int) -> list[tupl
     return out
 
 
+def _captura(rng, ponto: dict, quando: pd.Timestamp) -> tuple:
+    dl, da = 0.00054 * np.sqrt(rng.random()), rng.uniform(0, 2 * np.pi)       # câmera a ≤ 60 m do ponto
+    return quando, ponto["lat"] + dl * np.cos(da), ponto["lon"] + dl * np.sin(da), ponto
+
+
+def _no_caminho(rng, a: dict, b: dict, f: float, cidade: tuple, uf: str) -> dict:
+    """Câmera de passagem fixa entre a e b (fração f da reta), no centro de outra célula, com endereço próprio."""
+    pt = _ponto(rng, cidade, uf)
+    lat, lon = _centro_celula(a["lat"] + f * (b["lat"] - a["lat"]), a["lon"] + f * (b["lon"] - a["lon"]))
+    return pt | {"lat": lat, "lon": lon}
+
+
+def _rotina_encadeada(rng, casa: dict, trab: dict, meio: list[dict], dias_atras: np.ndarray) -> list[tuple]:
+    """Em cada dia de rotina: casa (6h–7h) → câmeras de passagem → trabalho, 15–60 min depois; às vezes a volta à tarde/noite.
+    Num dia em cada quatro o veículo só passa em casa (o trabalho fica com menos dias e o principal continua a casa)."""
+    out = []
+    h_ida, h_volta = int(rng.choice([6, 7])), int(rng.choice([17, 18, 19]))
+    for d in dias_atras:
+        dia = HOJE - pd.Timedelta(days=int(d))
+        t = dia + pd.Timedelta(minutes=float(h_ida * 60 + rng.normal(0, 20)))
+        out.append(_captura(rng, casa, t))
+        if rng.random() < P_DIA_SEM_TRAJETO:
+            continue
+        total = rng.uniform(15, 60)
+        for k, m in enumerate(meio, 1):
+            out.append(_captura(rng, m, t + pd.Timedelta(minutes=float(total * k / (len(meio) + 1)))))
+        out.append(_captura(rng, trab, t + pd.Timedelta(minutes=float(total))))
+        if rng.random() < P_VOLTA:
+            t = dia + pd.Timedelta(minutes=float(h_volta * 60 + rng.normal(0, 25)))
+            total = rng.uniform(15, 60)
+            out.append(_captura(rng, trab, t))
+            for k, m in enumerate(reversed(meio), 1):
+                out.append(_captura(rng, m, t + pd.Timedelta(minutes=float(total * k / (len(meio) + 1)))))
+            out.append(_captura(rng, casa, t + pd.Timedelta(minutes=float(total))))
+    return out
+
+
 def _veiculo(rng, uf: str, comarca: str) -> tuple[list[tuple], dict | None]:
     """Passagens de um veículo visto nos últimos 60 dias e o ponto "casa" (para o endereço do banco)."""
     cidade, uf_c = _cidade_do_veiculo(rng, uf, comarca)
@@ -92,14 +136,35 @@ def _veiculo(rng, uf: str, comarca: str) -> tuple[list[tuple], dict | None]:
     papeis = ["casa", "trabalho", "outro"][: 1 if dias == 1 else int(rng.integers(1, 4))]
     pontos = [_ponto(rng, cidade, uf_c) for _ in papeis]
     caps = []
+    encadeada = len(pontos) >= 2 and rng.random() < P_ENCADEADA
     for k, (papel, pt) in enumerate(zip(papeis, pontos)):
+        if encadeada and k == 1:
+            continue                                          # o trabalho vem na cadeia, junto com a casa
         n = dias if k == 0 else int(rng.integers(1, dias))
+        dias_atras = rng.choice(JANELA, n, replace=False)
+        if encadeada and k == 0:
+            casa, trab = pontos[0], pontos[1]
+            longe = haversine_km(casa, trab) > 1.5
+            meio = [_no_caminho(rng, casa, trab, f, cidade, uf_c) for f in
+                    ((1 / 2,), (1 / 3, 2 / 3))[int(rng.integers(0, 2))]] if longe and rng.random() < 0.7 else []
+            caps += _rotina_encadeada(rng, casa, trab, meio, dias_atras)
+            continue
         hora = int(rng.choice(HORAS.get(papel, list(range(6, 23)))))
-        caps += _passagens(rng, pt, rng.choice(JANELA, n, replace=False), hora)
+        caps += _passagens(rng, pt, dias_atras, hora)
     for _ in range(int(rng.integers(0, 5)) if estado == "aprendendo" else int(rng.integers(0, 2))):
         pt = _ponto(rng, cidade, uf_c)                        # esparsas: um dia cada, lugares diferentes
-        caps += _passagens(rng, pt, rng.choice(JANELA, 1), int(rng.integers(6, 23)))
+        if caps and rng.random() < P_ESPARSA_PERTO:           # às vezes logo depois de outra passagem (trajeto de 1 dia)
+            t0 = caps[int(rng.integers(len(caps)))][0]
+            caps.append(_captura(rng, pt, t0 + pd.Timedelta(minutes=float(rng.uniform(20, 150)))))
+        else:
+            caps += _passagens(rng, pt, rng.choice(JANELA, 1), int(rng.integers(6, 23)))
     return caps, pontos[0]
+
+
+def haversine_km(a: dict, b: dict) -> float:
+    la1, la2 = np.radians(a["lat"]), np.radians(b["lat"])
+    h = np.sin((la2 - la1) / 2) ** 2 + np.cos(la1) * np.cos(la2) * np.sin(np.radians(b["lon"] - a["lon"]) / 2) ** 2
+    return float(2 * 6371.0088 * np.arcsin(np.sqrt(h)))
 
 
 def _antigas(rng, uf: str, comarca: str) -> list[tuple]:
