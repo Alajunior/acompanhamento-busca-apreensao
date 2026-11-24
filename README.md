@@ -1,5 +1,13 @@
 # Acompanhamento de Busca e Apreensão: réplica de um painel jurídico, com dados sintéticos
 
+[![CI](https://github.com/Alajunior/acompanhamento-busca-apreensao/actions/workflows/ci.yml/badge.svg)](https://github.com/Alajunior/acompanhamento-busca-apreensao/actions/workflows/ci.yml) ![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white) [![Painel ao vivo](https://img.shields.io/badge/painel-ao%20vivo-2ea44f)](https://alajunior.github.io/acompanhamento-busca-apreensao/) ![Dados 100% sintéticos](https://img.shields.io/badge/dados-100%25%20sint%C3%A9ticos-6e7781)
+
+> **Em 30 segundos**
+>
+> - **Problema:** o jurídico precisa saber o que vence hoje, onde cada processo trava, quanto vale e onde está o veículo.
+> - **Como:** regra de etapas, travas de publicação, conciliação com a tabela oficial e padrões de circulação das placas por câmeras, calculados em Python e filtrados no navegador.
+> - **Resultado:** 226 testes, com paridade JS × Python em todas as contagens do painel. Os trajetos foram calibrados pelo painel real: 37% das pastas com captura têm algum trajeto, contra 38% no real.
+
 **Painel ao vivo:** https://alajunior.github.io/acompanhamento-busca-apreensao/ · dados 100% sintéticos · projeto de portfólio
 
 Quando o cliente para de pagar o financiamento do veículo e nem a cobrança nem a entrega amigável resolvem, o caso vai para o jurídico: ação de **busca e apreensão**. O processo anda por etapas (emenda da inicial, aguardando liminar, liminar deferida, mandados) e cada etapa vira uma tarefa com prazo no sistema do escritório.
