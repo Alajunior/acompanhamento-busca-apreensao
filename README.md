@@ -108,7 +108,7 @@ Na aba Busca e Apreensão, às 17:05: 1.664 pastas com localização ou apreens�
 pip install -r requirements.txt
 python -m dados.gerar --verificar      # simulação + conferência do funil (~15 s)
 python -m src.montar_painel            # docs/index.html, docs/bd.json, docs/placas.json e docs/ba.json
-python -m pytest                       # 223 testes (a paridade e a exportação precisam do Node)
+python -m pytest                       # 226 testes (a paridade e a exportação precisam do Node)
 ```
 
 Abra `docs/index.html` no navegador. Para o detalhe da aba Padrões, para a aba Busca e Apreensão e para as abas BD, Localizados e Padroes do `.xlsx`, sirva a pasta (`python -m http.server --directory docs`), porque o navegador não carrega `bd.json`, `placas.json` nem `ba.json` de um arquivo local.
@@ -133,7 +133,7 @@ src/ba.js                    as 12 seções e a linha do tempo da aba Busca e Ap
 src/referencia_ba.py         as mesmas seções em Python, para a paridade
 src/exportar.js              CSV por card e abas do .xlsx
 src/painel.html              o painel (HTML, CSS e JS puro)
-tests/                       223 testes: simulação, capturas, padrões, regra, travas, conciliação, payload, referência, paridade, exportação, guarda de publicação
+tests/                       226 testes: simulação, capturas, padrões, regra, travas, conciliação, payload, referência, paridade, exportação, guarda de publicação
 docs/                        o painel publicado, a base da exportação e as imagens deste README
 ```
 
